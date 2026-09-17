@@ -1,0 +1,317 @@
+﻿import '../design_system/colors.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_provider.dart';
+import '../models/lesson.dart';
+import '../models/question.dart';
+import '../models/unit.dart';
+import '../services/quiz_builder.dart';
+import '../widgets/mascot.dart';
+import 'practice_quiz_screen.dart';
+
+class LessonDetailScreen extends StatefulWidget {
+  final String subjectId;
+  final int lessonIndex;
+
+  const LessonDetailScreen({
+    super.key,
+    required this.subjectId,
+    required this.lessonIndex,
+  });
+
+  @override
+  State<LessonDetailScreen> createState() => _LessonDetailScreenState();
+}
+
+class _LessonDetailScreenState extends State<LessonDetailScreen>
+    with TickerProviderStateMixin {
+  late TabController _tabController;
+  late String _subjectName;
+  late Lesson? _lesson;
+  late List<Question> _quizQuestions;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<AppProvider>();
+    _subjectName =
+        provider.subjectById(widget.subjectId)?.name ?? widget.subjectId;
+    _lesson = provider.lessonOf(widget.subjectId, widget.lessonIndex);
+    final pool = provider.getQuestions(widget.subjectId, widget.lessonIndex);
+    _quizQuestions = QuizBuilder.build(
+      'lesson:${widget.subjectId}:${widget.lessonIndex}',
+      pool,
+      count: 3,
+    );
+  }
+
+  void _back() {
+    context.pop();
+  }
+
+  String get _lessonTitle =>
+      _lesson?.title ?? 'درس ${Unit.toArabicNumeral(widget.lessonIndex + 1)}';
+
+  Widget _buildSummaryTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: HaffarColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _lessonTitle,
+              style: const TextStyle(
+                fontFamily: 'BeVietnamPro',
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Mascot(pose: MascotPose.study, size: 56),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'محتوى الدرس',
+                  style: TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: HaffarColors.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Text(
+              _lesson?.summary ?? '',
+              style: const TextStyle(
+                fontFamily: 'PlusJakartaSans',
+                fontSize: 14,
+                color: Color(0xFF3f4a36),
+                height: 1.6,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'نقاط مهمة',
+            style: TextStyle(
+              fontFamily: 'BeVietnamPro',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...(_lesson?.keyPoints ?? const <String>[]).map(
+            (point) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.check_circle,
+                    size: 20,
+                    color: HaffarColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      point,
+                      style: const TextStyle(
+                        fontFamily: 'PlusJakartaSans',
+                        fontSize: 14,
+                        color: Color(0xFF3f4a36),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => _tabController.animateTo(1),
+              child: const Text(
+                'ابدأ التمرين',
+                style: TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 52,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: HaffarColors.primaryDark,
+                side: const BorderSide(color: HaffarColors.primary, width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: _markLessonUnderstood,
+              icon: const Icon(Icons.check_circle_outline, size: 22),
+              label: const Text(
+                'لقد فهمت الدرس',
+                style: TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _markLessonUnderstood() {
+    context.read<AppProvider>().completeSubjectLesson(
+      widget.subjectId,
+      widget.lessonIndex,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'رائع! تم فتح ما يلي من رحلتك',
+          style: TextStyle(
+            fontFamily: 'BeVietnamPro',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        backgroundColor: HaffarColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) context.pop();
+    });
+  }
+
+  Widget _buildQuizTab() {
+    if (_quizQuestions.isEmpty) {
+      return const Center(
+        child: Text(
+          'لا توجد أسئلة لهذا الدرس',
+          style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 16),
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Mascot(pose: MascotPose.determined, size: 88),
+          const SizedBox(height: 16),
+          const Text(
+            'تمرين الدرس',
+            style: TextStyle(
+              fontFamily: 'BeVietnamPro',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'أجب على ${_quizQuestions.length} أسئلة لاختبار فهمك',
+            style: const TextStyle(
+              fontFamily: 'PlusJakartaSans',
+              fontSize: 14,
+              color: HaffarColors.outline,
+            ),
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            height: 52,
+            width: 200,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PracticeQuizScreen(
+                    subjectId: widget.subjectId,
+                    title: '$_subjectName - $_lessonTitle',
+                    questions: _quizQuestions,
+                    attemptKind: 'lesson',
+                    attemptRefIndex: widget.lessonIndex,
+                    completionPose: MascotPose.cheer,
+                    completionTitle: 'أحسنت يا حفار!',
+                    completionMessage: 'أكملت جميع أسئلة هذا الدرس بنجاح',
+                  ),
+                ),
+              ),
+              child: const Text(
+                'ابدأ التمرين',
+                style: TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_lessonTitle),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _back,
+        ),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: HaffarColors.primary,
+          labelColor: HaffarColors.primary,
+          unselectedLabelColor: HaffarColors.textSecondary,
+          tabs: const [
+            Tab(text: 'ملخص الدرس'),
+            Tab(text: 'تمرين الدرس'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [_buildSummaryTab(), _buildQuizTab()],
+      ),
+    );
+  }
+}

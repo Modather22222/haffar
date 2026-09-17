@@ -1,0 +1,24 @@
+00	Flag	29x22
+01	Icons	19x24
+02	Icons	17x22
+03	Icons	23x20
+04	Icons	22x22
+05	Vector 39	2x75
+06	Vector 43	58x48
+07	Level Icon	42x40
+08	Vector 43	58x48
+09	Level Icon	42x36
+10	Vector 43	58x48
+11	Level Icon	36x35
+12	Level Icon	42x40
+13	Frame 48	33x26
+14	Level Icon	24x34
+15	Level Icon	42x40
+16	Level Icon	42x32
+17	Icons	34x29
+18	Icons	28x27
+19	Icons	37x31
+20	Icons	28x28
+21	Icons	33x30
+22	Icons	29x29
+23	Rectangle 27	82x53

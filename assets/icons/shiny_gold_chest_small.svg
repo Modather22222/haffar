@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28.0" height="27.0" viewBox="430.0 301.0 28.0 27.0" fill="none"><g xmlns="http://www.w3.org/2000/svg" id="Icon=Shiny Gold Chest, Size=Small">
+<g id="Group 7">
+<rect id="Rectangle 13" x="434.5" y="303" width="19" height="23" fill="#AA572A" />
+<g id="Mask group">
+<mask id="mask0_0_1" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="430" y="301" width="28" height="27">
+<path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M430 301H435.5V311.5H452.5V301H458V327.5H430V301ZM452.5 316.5H435.5V323.5H452.5V316.5Z" fill="#FFC800" />
+</mask>
+<g mask="url(#mask0_0_1)">
+<path id="Subtract_2" fill-rule="evenodd" clip-rule="evenodd" d="M431 301H434.5C435.052 301 435.5 301.448 435.5 302V311.5H452.5V302C452.5 301.448 452.948 301 453.5 301H457C457.552 301 458 301.448 458 302V326.5C458 327.052 457.552 327.5 457 327.5H431C430.448 327.5 430 327.052 430 326.5V302C430 301.448 430.448 301 431 301ZM452.5 316.5H435.5V323.5H452.5V316.5Z" fill="#FFC800" />
+<g id="Vector 14">
+<path d="M441 298.5L425.5 311V320.5L445.5 303.5L441 298.5Z" fill="#FBE56D" />
+<path d="M464.5 297L429.5 329H448.5L463.5 315.5L464.5 297Z" fill="#FBE56D" />
+</g>
+</g>
+</g>
+<rect id="Rectangle 14" x="439.5" y="308.5" width="10" height="11" rx="2" fill="#FFC800" />
+<g id="Keyhole">
+<circle id="Ellipse 11" cx="444.5" cy="313" r="2.5" fill="#CD7900" />
+<path id="Polygon 1" d="M443.582 313.619C443.93 312.816 445.07 312.816 445.418 313.619L446.493 316.103C446.779 316.763 446.295 317.5 445.575 317.5H443.425C442.705 317.5 442.221 316.763 442.507 316.103L443.582 313.619Z" fill="#CD7900" />
+</g>
+</g>
+</g>
+</svg>
