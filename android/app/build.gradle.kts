@@ -4,11 +4,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Read local.properties for keystore config (written by CI or developer)
-val localProps = java.util.Properties()
-val localPropsFile = rootProject.file("local.properties")
-if (localPropsFile.exists()) {
-    localPropsFile.inputStream().use { localProps.load(it) }
+// Helper to read local.properties values (for local dev)
+fun prop(key: String): String? {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) {
+        val p = java.util.Properties()
+        f.inputStream().use { p.load(it) }
+        return p[key] as? String
+    }
+    return null
 }
 
 android {
@@ -25,13 +29,15 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    // Signing config — production key from local.properties / CI env
     signingConfigs {
         create("release") {
-            storeFile = localProps["key.store"]?.let { file(it) }
-            storePassword = localProps["key.store.password"] as String?
-            keyAlias = localProps["key.alias"] as String?
-            keyPassword = localProps["key.key.password"] as String?
+            val storeFile = prop("key.store")
+            if (storeFile != null) {
+                this.storeFile = file(storeFile)
+                this.storePassword = prop("key.store.password") ?: ""
+                this.keyAlias = prop("key.alias") ?: ""
+                this.keyPassword = prop("key.key.password") ?: ""
+            }
         }
     }
 
@@ -39,30 +45,20 @@ android {
         applicationId = "com.haffar.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = localProps["versionCode"]?.toIntOrNull()
-            ?: System.getenv("VERSION_CODE")?.toIntOrNull()
-            ?: 1
-        versionName = localProps["versionName"] ?: "1.0.0"
+        versionCode = (System.getenv("VERSION_CODE") ?: prop("versionCode") ?: "1").toInt()
+        versionName = System.getenv("VERSION_NAME") ?: prop("versionName") ?: "1.0.0"
     }
 
     buildTypes {
         release {
-            if (localProps["key.store"] != null) {
-                signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (signingConfigs["release"].storeFile != null) {
+                signingConfigs["release"]
             } else {
-                // Fallback to debug signing for local dev without keystore
-                signingConfig = signingConfigs.getByName("debug")
+                signingConfigs.getByName("debug")
             }
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-
-    // Strip native libraries for non-target architectures to reduce APK size
-    packaging {
-        jniLibs {
-            useLegacyPackaging = false
         }
     }
 }
