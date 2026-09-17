@@ -55,9 +55,6 @@ jobs:
           echo "key.alias=${{ secrets.KEY_ALIAS }}" >> gradle.properties
           echo "key.store.password=${{ secrets.KEYSTORE_PASSWORD }}" >> gradle.properties
           echo "key.key.password=${{ secrets.KEY_PASSWORD }}" >> gradle.properties
-          # Write trimmed secrets to file (strips trailing newlines)
-          printf '%s' "${{ secrets.SUPABASE_URL }}" > supabase_url.txt
-          printf '%s' "${{ secrets.SUPABASE_ANON_KEY }}" > supabase_anon_key.txt
         shell: bash
 
       - name: Get dependencies
@@ -71,13 +68,11 @@ jobs:
 
       - name: Build Release APK (ARM64)
         run: |
-          SUPABASE_URL=$(cat supabase_url.txt)
-          SUPABASE_ANON_KEY=$(cat supabase_anon_key.txt)
           flutter build apk \
             --release \
             --target-platform=android-arm64 \
-            --dart-define="SUPABASE_URL=$SUPABASE_URL" \
-            --dart-define="SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" \
+            --dart-define="SUPABASE_URL=${{ secrets.SUPABASE_URL }}" \
+            --dart-define="SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" \
             --dart-define="VERSION_CODE=${{ env.VERSION_CODE }}" \
             --dart-define="VERSION_NAME=${{ env.VERSION_NAME }}"
 
