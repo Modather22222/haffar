@@ -47,3 +47,4 @@ app.*.map.json
 # Keystore secrets (written by CI or developer — never commit)
 local.properties
 android/key/
+gradle.properties
