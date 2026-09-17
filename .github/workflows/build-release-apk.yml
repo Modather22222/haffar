@@ -51,10 +51,11 @@ jobs:
         run: |
           mkdir -p android/key
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/key/release.keystore
-          echo "key.store=android/key/release.keystore" >> local.properties
-          echo "key.alias=${{ secrets.KEY_ALIAS }}" >> local.properties
-          echo "key.store.password=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
-          echo "key.key.password=${{ secrets.KEY_PASSWORD }}" >> local.properties
+          # Write keystore path to gradle.properties (read by build.gradle.kts)
+          echo "key.store=android/key/release.keystore" >> gradle.properties
+          echo "key.alias=${{ secrets.KEY_ALIAS }}" >> gradle.properties
+          echo "key.store.password=${{ secrets.KEYSTORE_PASSWORD }}" >> gradle.properties
+          echo "key.key.password=${{ secrets.KEY_PASSWORD }}" >> gradle.properties
         shell: bash
 
       - name: Get dependencies

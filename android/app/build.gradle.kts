@@ -4,16 +4,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Helper to read local.properties values (for local dev)
-fun prop(key: String): String? {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) {
-        val p = java.util.Properties()
-        f.inputStream().use { p.load(it) }
-        return p[key] as? String
-    }
-    return null
-}
+// Read keystore from gradle.properties or CI env vars
+val storeFile = project.findProperty("key.store") as? String
+    ?: System.getenv("KEYSTORE_PATH")
+val storePassword = project.findProperty("key.store.password") as? String
+    ?: System.getenv("KEYSTORE_PASSWORD") ?: ""
+val keyAlias = project.findProperty("key.alias") as? String
+    ?: System.getenv("KEY_ALIAS") ?: ""
+val keyPassword = project.findProperty("key.key.password") as? String
+    ?: System.getenv("KEY_PASSWORD") ?: ""
 
 android {
     namespace = "com.haffar.app"
@@ -26,17 +25,16 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     signingConfigs {
         create("release") {
-            val storeFile = prop("key.store")
             if (storeFile != null) {
                 this.storeFile = file(storeFile)
-                this.storePassword = prop("key.store.password") ?: ""
-                this.keyAlias = prop("key.alias") ?: ""
-                this.keyPassword = prop("key.key.password") ?: ""
+                this.storePassword = storePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
             }
         }
     }
@@ -45,13 +43,13 @@ android {
         applicationId = "com.haffar.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = (System.getenv("VERSION_CODE") ?: prop("versionCode") ?: "1").toInt()
-        versionName = System.getenv("VERSION_NAME") ?: prop("versionName") ?: "1.0.0"
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
     }
 
     buildTypes {
         release {
-            signingConfig = if (signingConfigs["release"].storeFile != null) {
+            signingConfig = if (storeFile != null) {
                 signingConfigs["release"]
             } else {
                 signingConfigs.getByName("debug")
