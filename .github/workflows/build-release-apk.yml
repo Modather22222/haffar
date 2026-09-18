@@ -40,6 +40,7 @@ jobs:
         run: |
           mkdir -p android/key
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/key/release.keystore
+          test -s android/key/release.keystore || { echo "::error::Decoded keystore is empty — check the KEYSTORE_BASE64 secret"; exit 1; }
           ls -l android/key/release.keystore
         shell: bash
 
@@ -55,7 +56,7 @@ jobs:
 
       - name: Build Release APK (ARM64)
         env:
-          KEYSTORE_PATH: android/key/release.keystore
+          KEYSTORE_PATH: ${{ github.workspace }}/android/key/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}

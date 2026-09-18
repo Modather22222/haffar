@@ -4,14 +4,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Read keystore from gradle.properties or CI env vars
-val storeFile = project.findProperty("key.store") as? String
+// Read keystore from gradle.properties or CI env vars.
+// NOTE: `file()` resolves against android/app/, rootProject.file() against
+// android/ — so try both bases and only use the keystore if it really exists.
+// CI passes an absolute path via KEYSTORE_PATH, which matches either way.
+val keystoreRaw = (project.findProperty("key.store") as? String)
     ?: System.getenv("KEYSTORE_PATH")
-val storePassword = project.findProperty("key.store.password") as? String
+val keystoreFile = keystoreRaw
+    ?.let { listOf(file(it), rootProject.file(it)) }
+    ?.firstOrNull { it.exists() }
+val ksStorePassword = (project.findProperty("key.store.password") as? String)
     ?: System.getenv("KEYSTORE_PASSWORD") ?: ""
-val keyAlias = project.findProperty("key.alias") as? String
+val ksKeyAlias = (project.findProperty("key.alias") as? String)
     ?: System.getenv("KEY_ALIAS") ?: ""
-val keyPassword = project.findProperty("key.key.password") as? String
+val ksKeyPassword = (project.findProperty("key.key.password") as? String)
     ?: System.getenv("KEY_PASSWORD") ?: ""
 
 android {
@@ -30,11 +36,12 @@ android {
 
     signingConfigs {
         create("release") {
-            if (storeFile != null) {
-                this.storeFile = file(storeFile)
-                this.storePassword = storePassword
-                this.keyAlias = keyAlias
-                this.keyPassword = keyPassword
+            val ks = keystoreFile
+            if (ks != null) {
+                storeFile = ks
+                storePassword = ksStorePassword
+                keyAlias = ksKeyAlias
+                keyPassword = ksKeyPassword
             }
         }
     }
@@ -49,9 +56,10 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (storeFile != null) {
+            signingConfig = if (keystoreFile != null) {
                 signingConfigs.getByName("release")
             } else {
+                logger.warn("No keystore file found — signing release build with debug keys.")
                 signingConfigs.getByName("debug")
             }
         }
