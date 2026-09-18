@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:ui';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -24,15 +26,56 @@ const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValu
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabaseAnonKey);
-  runApp(const HaffarApp());
+  // In release mode an uncaught async error kills the app with no message.
+  // Report instead of crashing so the user always sees a screen.
+  FlutterError.onError = FlutterError.presentError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught async error: $error\n$stack');
+    return true;
+  };
+  Object? initError;
+  try {
+    await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabaseAnonKey);
+  } catch (e) {
+    initError = e;
+  }
+  runApp(HaffarApp(initError: initError));
 }
 
-class HaffarApp extends StatelessWidget {
-  const HaffarApp({super.key});
+class HaffarApp extends StatefulWidget {
+  final Object? initError;
+
+  const HaffarApp({super.key, this.initError});
+
+  @override
+  State<HaffarApp> createState() => _HaffarAppState();
+}
+
+class _HaffarAppState extends State<HaffarApp> {
+  Object? _initError;
+  bool _retrying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initError = widget.initError;
+  }
+
+  Future<void> _retryInit() async {
+    setState(() => _retrying = true);
+    try {
+      await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabaseAnonKey);
+      if (mounted) setState(() => _initError = null);
+    } catch (e) {
+      if (mounted) setState(() => _initError = e);
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final initError = _initError;
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => AppProvider())],
       child: MaterialApp.router(
@@ -47,7 +90,85 @@ class HaffarApp extends StatelessWidget {
         ],
         supportedLocales: const [Locale('ar', 'SA')],
         theme: HaffarTheme.lightTheme,
-        routerConfig: router,
+        routerConfig: initError == null
+            ? router
+            : GoRouter(
+                initialLocation: '/',
+                routes: [
+                  GoRoute(
+                    path: '/',
+                    builder: (_, _) => _InitErrorScreen(
+                      error: initError,
+                      retrying: _retrying,
+                      onRetry: _retryInit,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// Shown instead of the app when backend init fails — displays the actual
+/// error so a crash is never silent, with a retry button.
+class _InitErrorScreen extends StatelessWidget {
+  final Object error;
+  final bool retrying;
+  final VoidCallback onRetry;
+
+  const _InitErrorScreen({required this.error, required this.retrying, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.cloud_off, size: 72, color: HaffarColors.primary),
+              const SizedBox(height: 16),
+              const Text(
+                'تعذر الاتصال بالخادم',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'تحقق من الإنترنت ثم حاول مجدداً',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 14, color: HaffarColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: HaffarColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SelectableText(
+                  error.toString(),
+                  textDirection: TextDirection.ltr,
+                  style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: retrying ? null : onRetry,
+                  child: Text(
+                    retrying ? 'جارٍ المحاولة...' : 'إعادة المحاولة',
+                    style: const TextStyle(fontFamily: 'BeVietnamPro', fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

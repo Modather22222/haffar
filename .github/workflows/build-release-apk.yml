@@ -36,6 +36,16 @@ jobs:
           cache: true
           cache-key: flutter-:pub-get-:-${{ hashFiles('**/pubspec.lock') }}
 
+      - name: Validate secrets
+        run: |
+          test -n "${{ secrets.SUPABASE_URL }}" || { echo "::error::SUPABASE_URL secret is empty"; exit 1; }
+          test -n "${{ secrets.SUPABASE_ANON_KEY }}" || { echo "::error::SUPABASE_ANON_KEY secret is empty"; exit 1; }
+          test -n "${{ secrets.KEYSTORE_BASE64 }}" || { echo "::error::KEYSTORE_BASE64 secret is empty"; exit 1; }
+          test -n "${{ secrets.KEYSTORE_PASSWORD }}" || { echo "::error::KEYSTORE_PASSWORD secret is empty"; exit 1; }
+          test -n "${{ secrets.KEY_ALIAS }}" || { echo "::error::KEY_ALIAS secret is empty"; exit 1; }
+          test -n "${{ secrets.KEY_PASSWORD }}" || { echo "::error::KEY_PASSWORD secret is empty"; exit 1; }
+        shell: bash
+
       - name: Decode Keystore
         run: |
           mkdir -p android/key
