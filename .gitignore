@@ -50,6 +50,6 @@ android/key/
 *.jks
 *.keystore
 
-# Local build outputs (never commit)
-app-release.apk
-haffar-release-arm64/
+# Local tool configs containing API keys — never commit
+opencode.json
+.vscode/mcp.json
