@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'design_system/colors.dart';
 import 'providers/app_provider.dart';
+import 'utils/app_logger.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_one_screen.dart';
 import 'screens/sign_in_loading_screen.dart';
@@ -26,19 +27,30 @@ const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValu
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppLog.info('main() start');
   // In release mode an uncaught async error kills the app with no message.
   // Report instead of crashing so the user always sees a screen.
-  FlutterError.onError = FlutterError.presentError;
+  FlutterError.onError = (details) {
+    AppLog.error('FlutterError', details.exception, details.stack);
+    FlutterError.presentError(details);
+  };
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Uncaught async error: $error\n$stack');
+    AppLog.error('Uncaught async error', error, stack);
     return true;
   };
+  // Log config shape only — never the key itself.
+  AppLog.info('supabase host=${Uri.tryParse(_supabaseUrl)?.host ?? '(bad-url)'} '
+      'keyLen=${_supabaseAnonKey.length}');
   Object? initError;
   try {
+    AppLog.info('Supabase.initialize start');
     await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabaseAnonKey);
-  } catch (e) {
+    AppLog.info('Supabase.initialize OK');
+  } catch (e, st) {
+    AppLog.error('Supabase.initialize FAILED', e, st);
     initError = e;
   }
+  AppLog.info('runApp (initError=${initError != null})');
   runApp(HaffarApp(initError: initError));
 }
 

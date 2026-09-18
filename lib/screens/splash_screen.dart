@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../design_system/colors.dart';
 import '../design_system/tokens/text_styles.dart';
 import '../providers/app_provider.dart';
+import '../utils/app_logger.dart';
 import '../utils/routes.dart';
 import 'onboarding_one_screen.dart';
 
@@ -45,29 +46,41 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
+    AppLog.info('splash _navigate start');
     final p = context.read<AppProvider>();
     await p.loadContent();
+    AppLog.info('loadContent done status=${p.contentStatus} '
+        'subjects=${p.subjects.length} questions=${p.totalQuestionCount()}');
     if (p.contentStatus == ContentStatus.error) {
+      AppLog.warn('content error, retrying once');
       await Future.delayed(const Duration(milliseconds: 800));
       await p.loadContent();
+      AppLog.info('loadContent retry status=${p.contentStatus}');
     }
     await p.initUserData();
+    AppLog.info('initUserData done sync=${p.remoteSyncEnabled} '
+        'loggedIn=${p.hasLoggedIn} onboarded=${p.hasCompletedOnboarding} '
+        'subject=${p.selectedSubjectId}');
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
     final provider = context.read<AppProvider>();
     if (!provider.hasLoggedIn) {
+      AppLog.info('route -> onboarding (not logged in)');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingOneScreen()),
       );
     } else if (!provider.hasCompletedOnboarding) {
+      AppLog.info('route -> onboarding (not completed)');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingOneScreen()),
       );
     } else if (provider.selectedSubjectId == null) {
+      AppLog.info('route -> onboarding (no subject)');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingOneScreen()),
       );
     } else {
+      AppLog.info('route -> home');
       context.go(Routes.home);
     }
   }

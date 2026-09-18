@@ -10,9 +10,8 @@ import '../services/content_repository.dart';
 import '../services/progress_repository.dart';
 import '../services/hearts_repository.dart';
 import '../services/xp_repository.dart';
+import '../utils/app_logger.dart';
 import '../utils/game_constants.dart';
-
-import 'dart:developer' as developer;
 
 enum ContentStatus { loading, loaded, error }
 
@@ -59,7 +58,7 @@ class AppProvider extends ChangeNotifier {
       }
       contentStatus = ContentStatus.loaded;
     } catch (e, st) {
-      developer.log('loadContent FAILED: $e\n$st', name: 'haffar.app');
+      AppLog.error('loadContent FAILED', e, st);
       contentStatus = ContentStatus.error;
     }
     notifyListeners();
@@ -100,7 +99,10 @@ class AppProvider extends ChangeNotifier {
       );
       await syncHeartsFromServer();
       _startHeartsRefreshTimer();
-    } catch (_) {
+      AppLog.info('initUserData OK lessons=${_completedSubjectLessons.length} '
+          'units=${_completedUnitExercises.length} hearts=$hearts xp=$xp');
+    } catch (e, st) {
+      AppLog.error('initUserData FAILED', e, st);
       remoteSyncEnabled = false;
     }
     notifyListeners();
