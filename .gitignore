@@ -53,3 +53,4 @@ android/key/
 # Local tool configs containing API keys — never commit
 opencode.json
 .vscode/mcp.json
+android/build/
