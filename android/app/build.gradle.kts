@@ -50,7 +50,7 @@ android {
     buildTypes {
         release {
             signingConfig = if (storeFile != null) {
-                signingConfigs["release"]
+                signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
             }

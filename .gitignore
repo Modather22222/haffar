@@ -47,4 +47,9 @@ app.*.map.json
 # Keystore secrets (written by CI or developer — never commit)
 local.properties
 android/key/
-gradle.properties
+*.jks
+*.keystore
+
+# Local build outputs (never commit)
+app-release.apk
+haffar-release-arm64/
