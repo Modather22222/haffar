@@ -21,7 +21,7 @@ val ksKeyPassword = (project.findProperty("key.key.password") as? String)
     ?: System.getenv("KEY_PASSWORD") ?: ""
 
 android {
-    namespace = "com.haffar.app"
+    namespace = "com.appy.haffar"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -47,7 +47,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.haffar.app"
+        applicationId = "com.appy.haffar"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()

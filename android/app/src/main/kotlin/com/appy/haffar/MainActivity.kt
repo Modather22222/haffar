@@ -1,4 +1,4 @@
-package com.haffar.app
+package com.appy.haffar
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -54,3 +54,4 @@ android/key/
 opencode.json
 .vscode/mcp.json
 android/build/
+android/.kotlin/
