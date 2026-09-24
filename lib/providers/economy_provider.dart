@@ -8,6 +8,7 @@ import '../services/xp_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/app_toast.dart';
 import '../utils/game_constants.dart';
+import '../utils/local_prefs.dart';
 
 /// Hearts, XP, streak, league — the game economy.
 /// All durable writes go through server RPCs; this provider only mirrors state.
@@ -30,6 +31,26 @@ class EconomyProvider extends ChangeNotifier {
   Duration? _lastServerRemaining;
   DateTime? _lastFetchTime;
 
+  /// Failed XP events awaiting retry: JSON strings {"a","s","si","li"}.
+  final List<String> _pendingXpEvents = [];
+  bool _pendingStreakBump = false;
+  bool _pendingLoaded = false;
+
+  Future<void> _loadPendingOutbox() async {
+    if (_pendingLoaded) return;
+    _pendingXpEvents
+      ..clear()
+      ..addAll(await LocalPrefs.readPendingXpEvents());
+    _pendingStreakBump = await LocalPrefs.readPendingStreak();
+    _pendingLoaded = true;
+    if (_pendingXpEvents.isNotEmpty || _pendingStreakBump) {
+      AppLog.info(
+        'economy outbox loaded xp=${_pendingXpEvents.length} '
+        'streak=$_pendingStreakBump',
+      );
+    }
+  }
+
   void attachRepos({
     required HeartsRepository heartsRepo,
     required XpRepository xpRepo,
@@ -41,8 +62,76 @@ class EconomyProvider extends ChangeNotifier {
     if (signedIn) _startHeartsRefreshTimer();
   }
 
+  /// Public entry so SessionProvider can await outbox flush before hydrate.
+  Future<void> prepareForHydrate() async {
+    await _loadPendingOutbox();
+    if (!remoteSyncEnabled || _xpRepo == null) return;
+
+    if (_pendingStreakBump) {
+      try {
+        await updateStreakOnCompletion();
+      } catch (e, st) {
+        AppLog.error('outbox streak retry failed', e, st);
+      }
+    }
+
+    final remaining = <String>[];
+    for (final raw in List.of(_pendingXpEvents)) {
+      try {
+        final m = _parseXpEvent(raw);
+        if (m == null) continue;
+        await _xpRepo!.insertEvent(
+          amount: m['a']! as int,
+          source: m['s']! as String,
+          subjectId: m['si'] as String?,
+          lessonIndex: m['li'] as int?,
+        );
+        AppLog.info('outbox XP flushed amount=${m['a']}');
+      } catch (e, st) {
+        AppLog.error('outbox XP retry failed', e, st);
+        remaining.add(raw);
+      }
+    }
+    _pendingXpEvents
+      ..clear()
+      ..addAll(remaining);
+    await LocalPrefs.writePendingXpEvents(_pendingXpEvents);
+  }
+
+  static String _encodeXpEvent({
+    required int amount,
+    required String source,
+    String? subjectId,
+    int? lessonIndex,
+  }) {
+    final si = subjectId ?? '';
+    final li = lessonIndex?.toString() ?? '';
+    return '$amount|$source|$si|$li';
+  }
+
+  static Map<String, dynamic>? _parseXpEvent(String raw) {
+    final parts = raw.split('|');
+    if (parts.length != 4) return null;
+    final amount = int.tryParse(parts[0]);
+    if (amount == null) return null;
+    return {
+      'a': amount,
+      's': parts[1],
+      'si': parts[2].isEmpty ? null : parts[2],
+      'li': parts[3].isEmpty ? null : int.tryParse(parts[3]),
+    };
+  }
+
   void hydrateFromProfile(Map<String, dynamic> profile) {
-    xp = (profile['xp'] as int?) ?? xp;
+    final serverXp = (profile['xp'] as int?) ?? xp;
+    // Apply any XP still sitting in the outbox (not yet on the server) so a
+    // failed add_xp_event is never wiped by the next hydrate.
+    var pendingSum = 0;
+    for (final raw in _pendingXpEvents) {
+      final m = _parseXpEvent(raw);
+      if (m != null) pendingSum += m['a']! as int;
+    }
+    xp = serverXp + pendingSum;
     streak = (profile['streak'] as int?) ?? streak;
     gems = (profile['gems'] as int?) ?? gems;
     league = (profile['league'] as String?) ?? league;
@@ -109,12 +198,15 @@ class EconomyProvider extends ChangeNotifier {
   }
 
   /// Records an XP event server-side; mirrors the aggregate locally.
+  /// On failure the event is queued in a local outbox and retried on the
+  /// next session restore — local XP is never rolled back by hydrate.
   Future<void> addXpEvent({
     required int amount,
     required String source,
     String? subjectId,
     int? lessonIndex,
   }) async {
+    if (amount <= 0) return; // RPC rejects amount <= 0
     if (!remoteSyncEnabled || _xpRepo == null) {
       xp += amount;
       notifyListeners();
@@ -130,16 +222,25 @@ class EconomyProvider extends ChangeNotifier {
       xp += amount;
       notifyListeners();
     } catch (e, st) {
-      // Keep local XP so the player isn't punished for a flaky network;
-      // server will catch up on next successful event / profile refresh.
-      AppLog.warn('addXpEvent server failed, granting locally: $e');
+      AppLog.warn('addXpEvent server failed, queueing outbox: $e');
       AppLog.error('addXpEvent', e, st);
+      await _loadPendingOutbox();
+      _pendingXpEvents.add(
+        _encodeXpEvent(
+          amount: amount,
+          source: source,
+          subjectId: subjectId,
+          lessonIndex: lessonIndex,
+        ),
+      );
+      await LocalPrefs.writePendingXpEvents(_pendingXpEvents);
       xp += amount;
       notifyListeners();
     }
   }
 
   /// Server-side streak bump after a successful completion.
+  /// Queues a local retry flag when the RPC fails.
   Future<void> updateStreakOnCompletion() async {
     if (!remoteSyncEnabled) return;
     final uid = Supabase.instance.client.auth.currentUser?.id;
@@ -152,9 +253,16 @@ class EconomyProvider extends ChangeNotifier {
               )
               as int;
       streak = newStreak;
+      if (_pendingStreakBump) {
+        _pendingStreakBump = false;
+        await LocalPrefs.writePendingStreak(false);
+      }
       notifyListeners();
     } catch (e, st) {
       AppLog.error('updateStreakOnCompletion', e, st);
+      await _loadPendingOutbox();
+      _pendingStreakBump = true;
+      await LocalPrefs.writePendingStreak(true);
     }
   }
 

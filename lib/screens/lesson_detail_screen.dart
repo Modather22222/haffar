@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/content_provider.dart';
+import '../providers/economy_provider.dart';
 import '../providers/progress_provider.dart';
 import '../models/lesson.dart';
 import '../models/question.dart';
@@ -201,6 +202,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
       widget.subjectId,
       widget.lessonIndex,
     );
+    // Manual completion still counts toward the daily streak.
+    context.read<EconomyProvider>().updateStreakOnCompletion();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text(

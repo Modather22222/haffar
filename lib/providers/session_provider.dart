@@ -95,6 +95,11 @@ class SessionProvider extends ChangeNotifier {
         return;
       }
 
+      // Flush local outbox (failed XP/streak/lesson writes) BEFORE reading
+      // the profile so hydrate sees the post-flush server state.
+      await economy.prepareForHydrate();
+      await progress.flushPending();
+
       final results = await Future.wait([
         progressRepo.fetchProfile(),
         progressRepo.fetchCompletedLessons(),

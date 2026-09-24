@@ -183,7 +183,10 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
     } else {
       progress.completeSubjectLesson(widget.subjectId, widget.attemptRefIndex);
     }
-    economy.updateStreakOnCompletion();
+    // Streak bumps only for lesson/unit completions (not review attempts).
+    if (widget.attemptKind == 'lesson' || widget.attemptKind == 'unit') {
+      economy.updateStreakOnCompletion();
+    }
 
     final pose =
         outcome.results.where((d) => d.isCorrect).length >

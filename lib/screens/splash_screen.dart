@@ -70,6 +70,8 @@ class _SplashScreenState extends State<SplashScreen>
         );
       }
     }
+    // Hydrate persisted onboarding/identity flags before routing.
+    await progress.loadLocalPrefs();
     await session.initUserData();
     AppLog.info(
       'initUserData done sync=${session.remoteSyncEnabled} '
@@ -79,16 +81,13 @@ class _SplashScreenState extends State<SplashScreen>
     );
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    if (!session.isSignedIn) {
-      AppLog.info('route -> onboarding (no session)');
-      context.go(Routes.welcome);
-    } else if (!progress.hasCompletedOnboarding ||
-        progress.selectedSubjectId == null) {
-      AppLog.info('route -> onboarding (session, incomplete)');
-      context.go(Routes.welcome);
-    } else {
-      AppLog.info('route -> home');
+    // Signed-in users always go home (skip welcome/onboarding on cold start).
+    if (session.isSignedIn) {
+      AppLog.info('route -> home (signed in)');
       context.go(Routes.home);
+    } else {
+      AppLog.info('route -> welcome (no session)');
+      context.go(Routes.welcome);
     }
   }
 

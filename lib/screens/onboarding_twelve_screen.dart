@@ -23,74 +23,74 @@ class OnboardingTwelveScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: Stack(
+            child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
+                  padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+                  child: Row(
                     children: [
-                      const Spacer(flex: 3),
-                      const HaffarSpeechBubble(
-                        message: 'اختار',
-                        tailPosition: BubbleTailPosition.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Image.asset(
-                        'assets/character/character (10).png',
-                        width: 220,
-                        height: 220,
-                      ),
-                      const SizedBox(height: 24),
-                      _GenderCard(
-                        label: 'طالب',
-                        icon: Icons.person_outline,
-                        selected: selected == 'male',
-                        onTap: () =>
-                            context.read<ProgressProvider>().setGender('male'),
-                      ),
-                      const SizedBox(height: 12),
-                      _GenderCard(
-                        label: 'طالبة',
-                        icon: Icons.person_outline,
-                        selected: selected == 'female',
-                        onTap: () => context.read<ProgressProvider>().setGender(
-                          'female',
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
                         ),
                       ),
-                      const Spacer(flex: 3),
-                      SizedBox(
-                        width: double.infinity,
-                        child: HaffarPrimaryButton(
-                          state: selected == null
-                              ? HaffarPrimaryButtonState.disabled
-                              : HaffarPrimaryButtonState.enabled,
-                          label: 'استمر',
-                          onPressed: selected == null
-                              ? null
-                              : () => context.push(Routes.onboardingThirteen),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
-                Positioned(
-                  right: 16,
-                  top: 8,
-                  child: GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: HaffarColors.grey5),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: HaffarColors.grey2,
-                        size: 22,
-                      ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 3),
+                        const HaffarSpeechBubble(
+                          message: 'اختار',
+                          tailPosition: BubbleTailPosition.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Image.asset(
+                          'assets/character/character (10).png',
+                          width: 220,
+                          height: 220,
+                        ),
+                        const SizedBox(height: 24),
+                        _GenderCard(
+                          label: 'طالب',
+                          icon: Icons.person_outline,
+                          selected: selected == 'male',
+                          onTap: () => context
+                              .read<ProgressProvider>()
+                              .setGender('male'),
+                        ),
+                        const SizedBox(height: 12),
+                        _GenderCard(
+                          label: 'طالبة',
+                          icon: Icons.person_outline,
+                          selected: selected == 'female',
+                          onTap: () => context
+                              .read<ProgressProvider>()
+                              .setGender('female'),
+                        ),
+                        const Spacer(flex: 3),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: HaffarPrimaryButton(
+                      state: selected == null
+                          ? HaffarPrimaryButtonState.disabled
+                          : HaffarPrimaryButtonState.enabled,
+                      label: 'استمر',
+                      onPressed: selected == null
+                          ? null
+                          : () => context.push(Routes.onboardingThirteen),
                     ),
                   ),
                 ),

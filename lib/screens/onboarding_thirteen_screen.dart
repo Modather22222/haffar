@@ -41,81 +41,83 @@ class _OnboardingThirteenScreenState extends State<OnboardingThirteenScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: Stack(
+            child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
+                  padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+                  child: Row(
                     children: [
-                      const Spacer(flex: 3),
-                      const HaffarSpeechBubble(
-                        message: 'حفار حيناديك بي منو',
-                        tailPosition: BubbleTailPosition.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Image.asset(
-                        'assets/character/character (7).png',
-                        width: 220,
-                        height: 220,
-                      ),
-                      const SizedBox(height: 24),
-                      TextField(
-                        controller: _controller,
-                        textAlign: TextAlign.center,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) => _continue(),
-                        decoration: const InputDecoration(
-                          hintText: 'اكتب اسمك',
-                          hintStyle: TextStyle(
-                            fontFamily: 'DIN2014Rounded',
-                            color: HaffarColors.grey3,
-                          ),
-                          filled: true,
-                          fillColor: HaffarColors.grey6,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
                         ),
                       ),
-                      const Spacer(flex: 3),
-                      SizedBox(
-                        width: double.infinity,
-                        child: HaffarPrimaryButton(
-                          state: _controller.text.trim().isEmpty
-                              ? HaffarPrimaryButtonState.disabled
-                              : HaffarPrimaryButtonState.enabled,
-                          label: 'استمر',
-                          onPressed: _controller.text.trim().isEmpty
-                              ? null
-                              : _continue,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
-                Positioned(
-                  right: 16,
-                  top: 8,
-                  child: GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: HaffarColors.grey5),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: HaffarColors.grey2,
-                        size: 22,
-                      ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const Spacer(flex: 3),
+                        const HaffarSpeechBubble(
+                          message: 'حفار حيناديك بي منو',
+                          tailPosition: BubbleTailPosition.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Image.asset(
+                          'assets/character/character (7).png',
+                          width: 220,
+                          height: 220,
+                        ),
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: _controller,
+                          textAlign: TextAlign.center,
+                          textInputAction: TextInputAction.done,
+                          onChanged: (_) => setState(() {}),
+                          onSubmitted: (_) => _continue(),
+                          decoration: const InputDecoration(
+                            hintText: 'اكتب اسمك',
+                            hintStyle: TextStyle(
+                              fontFamily: 'DIN2014Rounded',
+                              color: HaffarColors.grey3,
+                            ),
+                            filled: true,
+                            fillColor: HaffarColors.grey6,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                        ),
+                        const Spacer(flex: 3),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: HaffarPrimaryButton(
+                      state: _controller.text.trim().isEmpty
+                          ? HaffarPrimaryButtonState.disabled
+                          : HaffarPrimaryButtonState.enabled,
+                      label: 'استمر',
+                      onPressed: _controller.text.trim().isEmpty
+                          ? null
+                          : _continue,
                     ),
                   ),
                 ),

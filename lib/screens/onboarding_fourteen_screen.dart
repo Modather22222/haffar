@@ -149,139 +149,141 @@ class _OnboardingFourteenScreenState extends State<OnboardingFourteenScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: Stack(
+            child: Column(
               children: [
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+                  child: Row(
                     children: [
-                      const SizedBox(height: 40),
-                      const HaffarSpeechBubble(
-                        message: 'ادخل ايميل وكلمة مرور عشان حفار يتذكرك',
-                        tailPosition: BubbleTailPosition.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Image.asset(
-                        'assets/character/character (10).png',
-                        width: 200,
-                        height: 200,
-                      ),
-                      const SizedBox(height: 24),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        textDirection: TextDirection.ltr,
-                        onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Email',
-                          hintStyle: TextStyle(
-                            fontFamily: 'DIN2014Rounded',
-                            color: HaffarColors.grey3,
-                          ),
-                          filled: true,
-                          fillColor: HaffarColors.grey6,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        textDirection: TextDirection.ltr,
-                        onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          hintText: 'Password (8+)',
-                          hintStyle: const TextStyle(
-                            fontFamily: 'DIN2014Rounded',
-                            color: HaffarColors.grey3,
-                          ),
-                          filled: true,
-                          fillColor: HaffarColors.grey6,
-                          border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: HaffarColors.grey3,
-                            ),
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontFamily: 'DIN2014Rounded',
-                            fontSize: 13,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: HaffarPrimaryButton(
-                          state: _canSubmit
-                              ? HaffarPrimaryButtonState.enabled
-                              : HaffarPrimaryButtonState.disabled,
-                          label: _loading ? 'جارٍ الإنشاء...' : 'استمر',
-                          onPressed: _canSubmit ? _signUp : null,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => context.push(Routes.signIn),
-                        child: const Text(
-                          'لديّ حساب بالفعل',
-                          style: TextStyle(
-                            fontFamily: 'DIN2014Rounded',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: HaffarColors.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
-                Positioned(
-                  right: 16,
-                  top: 8,
-                  child: GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: HaffarColors.grey5),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: HaffarColors.grey2,
-                        size: 22,
-                      ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        const HaffarSpeechBubble(
+                          message: 'ادخل ايميل وكلمة مرور عشان حفار يتذكرك',
+                          tailPosition: BubbleTailPosition.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Image.asset(
+                          'assets/character/character (10).png',
+                          width: 200,
+                          height: 200,
+                        ),
+                        const SizedBox(height: 24),
+                        TextField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textDirection: TextDirection.ltr,
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            hintText: 'Email',
+                            hintStyle: TextStyle(
+                              fontFamily: 'DIN2014Rounded',
+                              color: HaffarColors.grey3,
+                            ),
+                            filled: true,
+                            fillColor: HaffarColors.grey6,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textDirection: TextDirection.ltr,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Password (8+)',
+                            hintStyle: const TextStyle(
+                              fontFamily: 'DIN2014Rounded',
+                              color: HaffarColors.grey3,
+                            ),
+                            filled: true,
+                            fillColor: HaffarColors.grey6,
+                            border: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(12),
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: HaffarColors.grey3,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'DIN2014Rounded',
+                              fontSize: 13,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        TextButton(
+                          onPressed: () => context.push(Routes.signIn),
+                          child: const Text(
+                            'لديّ حساب بالفعل',
+                            style: TextStyle(
+                              fontFamily: 'DIN2014Rounded',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: HaffarColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: HaffarPrimaryButton(
+                      state: _canSubmit
+                          ? HaffarPrimaryButtonState.enabled
+                          : HaffarPrimaryButtonState.disabled,
+                      label: _loading ? 'جارٍ الإنشاء...' : 'استمر',
+                      onPressed: _canSubmit ? _signUp : null,
                     ),
                   ),
                 ),

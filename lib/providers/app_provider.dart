@@ -144,8 +144,6 @@ class AppProvider extends ChangeNotifier {
 
   int get completedLessons => progress.completedLessons;
 
-  set completedLessons(int v) => progress.completedLessons = v;
-
   bool get hasCompletedOnboarding => progress.hasCompletedOnboarding;
 
   set hasCompletedOnboarding(bool v) => progress.hasCompletedOnboarding = v;
@@ -207,8 +205,6 @@ class AppProvider extends ChangeNotifier {
   void selectSubject(String id) => progress.selectSubject(id);
 
   void toggleSelectedSubject(String id) => progress.toggleSelectedSubject(id);
-
-  void advanceLesson() => progress.advanceLesson();
 
   void resetProgress() {
     progress.resetProgress();

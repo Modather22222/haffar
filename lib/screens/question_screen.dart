@@ -79,7 +79,13 @@ class _QuestionScreenState extends State<QuestionScreen>
     _animController.forward();
     if (correct) {
       SoundManager.playCorrect(_question.id);
-      context.read<EconomyProvider>().addXp(3);
+      // Sync via add_xp_event so this XP survives hydrate + shows on profile.
+      context.read<EconomyProvider>().addXpEvent(
+        amount: 3,
+        source: 'bonus',
+        subjectId: _subjectId,
+        lessonIndex: _lessonIndex,
+      );
     } else {
       SoundManager.playWrong(_question.id);
     }

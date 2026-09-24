@@ -78,21 +78,25 @@ class AuthService {
 
   /// Restore an existing session if present. Does NOT create anonymous
   /// sessions — callers should route unauthenticated users to sign-up/in.
+  ///
+  /// Always awaits [SupabaseClient.auth.getSession] so expired tokens are
+  /// refreshed before splash routes (best practice for Supabase v2). Falls
+  /// back to an offline cached [currentSession] when refresh fails.
   Future<bool> restoreSession() async {
-    if (isSignedIn) {
-      AppLog.info('auth: existing session user=${currentUser?.id}');
-      return true;
-    }
     try {
-      // getSessionFromUrl / currentSession is populated by Supabase.initialize
-      // from local storage; force a refresh attempt for stale tokens.
-      await _client.auth.getSession();
+      final session = await _client.auth.getSession();
+      final ok = session != null;
+      AppLog.info(
+        'auth: restoreSession getSession ok=$ok '
+        'user=${session?.user.id}',
+      );
+      return ok;
     } catch (e, st) {
-      AppLog.error('auth: getSession FAILED', e, st);
-      return false;
+      // Offline or refresh failed: keep whatever Supabase.initialize hydrated.
+      final offline = isSignedIn;
+      AppLog.warn('auth: getSession failed ($e) offlineFallback=$offline');
+      AppLog.error('auth: restoreSession getSession error', e, st);
+      return offline;
     }
-    final ok = isSignedIn;
-    AppLog.info('auth: restoreSession ok=$ok');
-    return ok;
   }
 }
