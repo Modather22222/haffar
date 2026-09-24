@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../colors.dart';
+import '../buttons/button_general_primary.dart';
+
 // Feedback sheets — ported from the Duolingo Duo modals, adapted to
 // Haffar (BeVietnamPro typography, brand imagery removed per request).
 // No mascot/images inside the sheets.
 
-// ── Correct: Duo light green banner + white-check circle ─────────────────
-const Color _correctBg = Color(0xFFEDFBE9);
-const Color _correctHeading = Color(0xFF50A130);
-const Color _correctButtonBg = Color(0xFF50A130);
-const Color _correctButtonShadow = Color(0xFF0E8A00);
-const Color _correctFlagColor = Color(0xFF0E8A00);
+// ── Correct: Haffar orange banner + white-check circle ──────────────────
+const Color _correctBg = Color(0xFFFFE9D6);
+const Color _correctHeading = HaffarColors.primary;
+const Color _correctFlagColor = HaffarColors.primaryDark;
 
 // ── Wrong: Duo red banner + white-cross circle ───────────────────────────
 const Color _wrongBg = Color(0xFFFBCECE);
 const Color _wrongTextPrimary = Color(0xFFED0C0C);
-const Color _wrongPrimaryBg = Color(0xFFED0C0C);
-const Color _wrongPrimaryShadow = Color(0xFFAA0909);
 
 class LessonCorrectFeedback extends StatelessWidget {
   final String heading;
@@ -98,39 +97,15 @@ class _CorrectContinueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: 44,
-        decoration: BoxDecoration(
-          color: _correctButtonBg,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: const [
-            BoxShadow(
-              color: _correctButtonShadow,
-              offset: Offset(0, 4),
-              blurRadius: 0,
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            'متابعة',
-            style: TextStyle(
-              fontFamily: 'BeVietnamPro',
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
+    return HaffarPrimaryButton(
+      label: 'متابعة',
+      fullWidth: true,
+      onPressed: onTap,
     );
   }
 }
 
-/// Green circle with white checkmark.
+/// Orange circle with white checkmark.
 class _CircleTickIcon extends StatelessWidget {
   const _CircleTickIcon();
 
@@ -150,7 +125,7 @@ class _CircleTickPainter extends CustomPainter {
     final s = size.width / 24.0;
     canvas.save();
     canvas.scale(s);
-    final circle = Paint()..color = const Color(0xFF50A130);
+    final circle = Paint()..color = HaffarColors.primary;
     canvas.drawCircle(const Offset(12, 12), 12, circle);
     final strokePaint = Paint()
       ..color = Colors.white
@@ -367,34 +342,11 @@ class _WrongPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: 44,
-        decoration: BoxDecoration(
-          color: _wrongPrimaryBg,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: const [
-            BoxShadow(
-              color: _wrongPrimaryShadow,
-              offset: Offset(0, 4),
-              blurRadius: 0,
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            'متابعة',
-            style: TextStyle(
-              fontFamily: 'BeVietnamPro',
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
+    return HaffarPrimaryButton(
+      label: 'متابعة',
+      fullWidth: true,
+      backgroundColor: _wrongTextPrimary,
+      onPressed: onTap,
     );
   }
 }

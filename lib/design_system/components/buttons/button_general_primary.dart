@@ -9,27 +9,33 @@ class HaffarPrimaryButton extends StatelessWidget {
   final HaffarPrimaryButtonState state;
   final String label;
   final VoidCallback? onPressed;
+  final bool fullWidth;
+  final Color? backgroundColor;
 
   const HaffarPrimaryButton({
     super.key,
     this.state = HaffarPrimaryButtonState.enabled,
     required this.label,
     this.onPressed,
+    this.fullWidth = false,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final p = _palette(state);
+    final bg = backgroundColor ?? p.background;
 
     final button = Container(
+      width: fullWidth ? double.infinity : null,
       height: HaffarMetrics.buttonHeight,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: BoxDecoration(
-        color: p.background,
-        borderRadius: BorderRadius.circular(12),
+        color: bg,
+        borderRadius: BorderRadius.circular(HaffarMetrics.radiusSm),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(

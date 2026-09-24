@@ -65,7 +65,7 @@ List<Question> buildUnitQuiz({
   required String subjectId,
   required int unitIndex,
   required List<Question> pool,
-  int count = 9,
+  int count = 10,
 }) {
   return QuizBuilder.build('unit:$subjectId:$unitIndex', pool, count: count);
 }

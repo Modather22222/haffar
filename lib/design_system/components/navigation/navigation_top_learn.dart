@@ -25,12 +25,16 @@ class LearnTopBar extends StatelessWidget {
   final double? width;
   final VoidCallback? onClose;
 
+  /// Subscribers have unlimited hearts — render `∞` instead of the count.
+  final bool showInfinite;
+
   const LearnTopBar({
     super.key,
     required this.progress,
     required this.hearts,
     this.width,
     this.onClose,
+    this.showInfinite = false,
   });
 
   @override
@@ -61,7 +65,7 @@ class LearnTopBar extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                hearts.toString().padLeft(2, '0'),
+                showInfinite ? '∞' : hearts.toString().padLeft(2, '0'),
                 style: const TextStyle(
                   fontFamily: 'BeVietnamPro',
                   fontSize: 12,

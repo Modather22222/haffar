@@ -54,8 +54,20 @@ class QuizController extends ChangeNotifier {
   final void Function(QuizOutcome outcome)? onFinished;
 
   /// Heart gate supplied by the screen (remaining hearts / subscription).
+  /// Used only for lesson/review attempts — unit uses [localHearts].
   int Function()? heartsProvider;
   bool Function()? isSubscribedProvider;
+
+  /// Unit exams use a private 5-heart pool that resets every attempt and
+  /// never touches the global EconomyProvider hearts.
+  int localHearts = GameConstants.unitHearts;
+
+  bool get isUnit => attemptKind == 'unit';
+
+  /// Fix phase never spends hearts — only the main question pass does.
+  /// Unit decrements [localHearts] inside [submitAnswer]; lessons ask the
+  /// screen to call EconomyProvider only when this is true.
+  bool get shouldSpendHeartOnWrong => !isFixPhase;
 
   int questionIndex = 0;
   bool answered = false;
@@ -67,6 +79,10 @@ class QuizController extends ChangeNotifier {
   int initialMistakeCount = 0;
   int fixPhaseIndex = 0;
   List<String> fixPhaseQuestionIds = const [];
+
+  /// Bumped when a fix-phase wrong retries the same question — screens use
+  /// this to remount the question widget (clears submitted/fill state).
+  int fixRetryCount = 0;
   final List<AttemptDetail> results = [];
   DateTime? startTime;
   late Question currentQuestion;
@@ -99,6 +115,7 @@ class QuizController extends ChangeNotifier {
 
   void start() {
     startTime = DateTime.now();
+    if (isUnit) localHearts = GameConstants.unitHearts;
     currentQuestion = questions.isNotEmpty
         ? questions.first
         : Question(
@@ -113,19 +130,28 @@ class QuizController extends ChangeNotifier {
 
   void markHeartsDepleted() {
     isHeartsDepleted = true;
-    _saveAttempt();
+    // Unit fail: no XP (finish never runs) — skip attempt save so a failed
+    // run doesn't look like a completed attempt in history.
+    if (!isUnit) _saveAttempt();
     notifyListeners();
   }
 
   /// Apply an answer. Returns true when correct.
+  /// Unit wrong answers decrement the local 5-heart pool (never global).
+  /// Fix-phase answers never spend hearts and are not re-logged to [results].
   bool submitAnswer(bool correct, String? correctAnswer) {
     answered = true;
     isCorrect = correct;
     correctAnswerText = correctAnswer;
-    results.add(
-      AttemptDetail(questionId: currentQuestion.id, isCorrect: correct),
-    );
-    if (!correct && !isFixPhase) initialMistakeCount++;
+    if (!isFixPhase) {
+      results.add(
+        AttemptDetail(questionId: currentQuestion.id, isCorrect: correct),
+      );
+      if (!correct) {
+        initialMistakeCount++;
+        if (isUnit && localHearts > 0) localHearts--;
+      }
+    }
     notifyListeners();
     return correct;
   }
@@ -133,12 +159,21 @@ class QuizController extends ChangeNotifier {
   /// متابعة / next — may open fix phase, deplete hearts, or finish.
   /// Returns true if the UI should show the hearts-depleted screen.
   bool next() {
-    final hearts = heartsProvider?.call() ?? GameConstants.maxHearts;
-    final subscribed = isSubscribedProvider?.call() ?? false;
-    if (!isFixPhase && !subscribed && hearts <= 0) {
-      markHeartsDepleted();
-      onHeartsDepleted?.call();
-      return true;
+    if (isUnit) {
+      // Unit: private 5-heart pool; subscribers are NOT immune.
+      if (!isFixPhase && localHearts <= 0) {
+        markHeartsDepleted();
+        onHeartsDepleted?.call();
+        return true;
+      }
+    } else {
+      final hearts = heartsProvider?.call() ?? GameConstants.maxHearts;
+      final subscribed = isSubscribedProvider?.call() ?? false;
+      if (!isFixPhase && !subscribed && hearts <= 0) {
+        markHeartsDepleted();
+        onHeartsDepleted?.call();
+        return true;
+      }
     }
     if (isFixPhase) {
       _fixPhaseNext();
@@ -188,18 +223,38 @@ class QuizController extends ChangeNotifier {
         .map((d) => d.questionId)
         .toList();
     fixPhaseIndex = 0;
+    fixRetryCount = 0;
     answered = false;
     isCorrect = false;
+    correctAnswerText = null;
     showFixIntro = true;
+    if (fixPhaseQuestionIds.isNotEmpty) {
+      currentQuestion = questionById(fixPhaseQuestionIds.first, questions);
+    }
     notifyListeners();
   }
 
+  /// Wrong in fix → repeat the same question. Correct → next mistake or finish.
   void _fixPhaseNext() {
-    if (fixPhaseIndex + 1 < fixPhaseQuestionIds.length) {
-      fixPhaseIndex++;
+    if (!isCorrect) {
+      // Stay on fixPhaseIndex; remount widget so the user can try again.
       answered = false;
       isCorrect = false;
       correctAnswerText = null;
+      fixRetryCount++;
+      notifyListeners();
+      return;
+    }
+    if (fixPhaseIndex + 1 < fixPhaseQuestionIds.length) {
+      fixPhaseIndex++;
+      fixRetryCount = 0;
+      answered = false;
+      isCorrect = false;
+      correctAnswerText = null;
+      currentQuestion = questionById(
+        fixPhaseQuestionIds[fixPhaseIndex],
+        questions,
+      );
       notifyListeners();
     } else {
       finish();
@@ -207,13 +262,11 @@ class QuizController extends ChangeNotifier {
   }
 
   /// Computes XP, persists the attempt, and emits [onFinished].
+  /// Unit: flat 150 − 18×wrong (no time bonus). Lesson: 100 − 5×wrong.
+  /// Never called on hearts depletion — fail path grants 0 XP.
   QuizOutcome finish() {
     var finalXp = baseXp - (initialMistakeCount * penaltyPerWrong);
     finalXp = finalXp.clamp(0, 9999);
-    if (attemptKind == 'unit' &&
-        elapsed < GameConstants.unitBonusTimeThreshold) {
-      finalXp += GameConstants.unitBonusXp;
-    }
     _saveAttempt();
     final outcome = QuizOutcome(
       xp: finalXp,

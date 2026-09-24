@@ -266,6 +266,31 @@ class EconomyProvider extends ChangeNotifier {
     }
   }
 
+  /// Re-reads the streak server-side and zeroes it when the last completion
+  /// was more than a day ago (missed day → streak resets). Called on session
+  /// hydrate and on home entry so the displayed streak is never stale.
+  Future<void> refreshStreakFromServer() async {
+    if (!remoteSyncEnabled) return;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      final effective =
+          await Supabase.instance.client.rpc(
+                'refresh_streak',
+                params: {'p_user_id': uid},
+              )
+              as int;
+      if (streak != effective) {
+        streak = effective;
+        notifyListeners();
+      }
+    } catch (e, st) {
+      // Display-only refresh — never block the UI on it.
+      AppLog.warn('refreshStreakFromServer failed: $e');
+      AppLog.error('refreshStreakFromServer', e, st);
+    }
+  }
+
   /// Local-only XP bump (no server event). Prefer [addXpEvent].
   void addXp(int amount) {
     xp += amount;

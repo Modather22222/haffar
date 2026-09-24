@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design_system/colors.dart';
+import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
+import '../design_system/components/lesson_complete_screen.dart';
 import '../design_system/components/modal/lesson_feedback.dart';
 import '../design_system/components/navigation/navigation_top_learn.dart';
 import '../providers/content_provider.dart';
@@ -14,7 +16,6 @@ import '../models/quiz_attempt.dart';
 import '../services/attempt_repository.dart';
 import '../widgets/question_widgets/question_widget_factory.dart';
 import '../widgets/mascot.dart';
-import '../widgets/celebration_dialog.dart';
 import '../widgets/quiz_controller.dart';
 import '../utils/app_logger.dart';
 import '../utils/app_toast.dart';
@@ -58,8 +59,13 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
   late AnimationController _animController;
   late QuizController _quiz;
 
+  /// Unit exercises open with a full-screen hearts intro before Q1.
+  late bool _unitIntroVisible;
+
   @override
   void initState() {
+    super.initState();
+    _unitIntroVisible = widget.attemptKind == 'unit';
     super.initState();
     _animController = AnimationController(
       vsync: this,
@@ -76,7 +82,10 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
       },
       onFinished: _onFinished,
     );
-    _quiz.heartsProvider = () => context.read<EconomyProvider>().hearts;
+    _quiz.heartsProvider = () {
+      if (widget.attemptKind == 'unit') return _quiz.localHearts;
+      return context.read<EconomyProvider>().hearts;
+    };
     _quiz.isSubscribedProvider = () =>
         context.read<EconomyProvider>().isSubscribed;
     _quiz.start();
@@ -91,6 +100,11 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
   }
 
   Future<void> _enterQuiz() async {
+    // Unit exams use a private 5-heart pool — never gated on global hearts.
+    if (widget.attemptKind == 'unit') {
+      if (mounted) setState(() {});
+      return;
+    }
     final economy = context.read<EconomyProvider>();
     await economy.syncHeartsFromServer();
     if (!mounted) return;
@@ -110,14 +124,14 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
       SoundManager.playCorrect(_quiz.currentQuestion.id);
     } else {
       SoundManager.playWrong(_quiz.currentQuestion.id);
-      if (!_quiz.isFixPhase) {
+      // Unit uses QuizController.localHearts (never global). Lessons only
+      // spend a global heart on main-phase wrongs — fix phase is free.
+      if (widget.attemptKind != 'unit' && _quiz.shouldSpendHeartOnWrong) {
         try {
           await context.read<EconomyProvider>().consumeHeartForExam(
-            isUnitExam: widget.attemptKind == 'unit',
+            isUnitExam: false,
           );
         } catch (e, st) {
-          // EconomyProvider already falls back locally + toasts; this is a
-          // last-resort guard so the quiz never freezes on a thrown error.
           AppLog.error('consumeHeart (screen)', e, st);
           AppToast.error(e, fallback: 'تعذر خصم القلب — حاول مجدداً');
         }
@@ -128,7 +142,10 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
 
   void _nextQuestion() {
     final economy = context.read<EconomyProvider>();
-    _quiz.heartsProvider = () => economy.hearts;
+    _quiz.heartsProvider = () {
+      if (widget.attemptKind == 'unit') return _quiz.localHearts;
+      return economy.hearts;
+    };
     _quiz.isSubscribedProvider = () => economy.isSubscribed;
 
     final beforeQuestion = _quiz.questionIndex;
@@ -168,16 +185,19 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
 
   void _onFinished(QuizOutcome outcome) {
     if (!mounted) return;
+    // Fail path never reaches here (finish not called on depletion).
     final economy = context.read<EconomyProvider>();
     final progress = context.read<ProgressProvider>();
-    economy.addXpEvent(
-      amount: outcome.xp,
-      source: widget.attemptKind,
-      subjectId: widget.subjectId,
-      lessonIndex: widget.attemptKind == 'lesson'
-          ? widget.attemptRefIndex
-          : null,
-    );
+    if (outcome.xp > 0) {
+      economy.addXpEvent(
+        amount: outcome.xp,
+        source: widget.attemptKind,
+        subjectId: widget.subjectId,
+        lessonIndex: widget.attemptKind == 'lesson'
+            ? widget.attemptRefIndex
+            : null,
+      );
+    }
     if (widget.attemptKind == 'unit') {
       progress.completeUnitExercise(widget.subjectId, widget.attemptRefIndex);
     } else {
@@ -193,18 +213,33 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
             widget.questions.length ~/ 2
         ? MascotPose.cheer
         : MascotPose.sad;
-    CelebrationDialog.show(
+    final correct = outcome.results.where((d) => d.isCorrect).length;
+    final total = widget.questions.length;
+    final accuracy = total == 0 ? 0 : ((correct * 100) / total).round();
+    final accuracyLabel = accuracy >= 80
+        ? 'ممتاز'
+        : accuracy >= 50
+        ? 'جيد'
+        : 'حاول مجدداً';
+    final title = widget.attemptKind == 'unit'
+        ? 'أكملت تمرين الوحدة!'
+        : widget.attemptKind == 'review'
+        ? 'راجعت بنجاح!'
+        : 'أكملت الدرس!';
+    LessonCompleteScreen.show(
       context,
       pose: pose,
-      title: '',
-      message: '',
-      popUnderneath: true,
+      title: title,
       xpGained: outcome.xp,
+      accuracyPercent: accuracy,
+      accuracyLabel: accuracyLabel,
       duration: outcome.elapsed,
+      popUnderneath: true,
     );
   }
 
   Widget _heartsDepletedBody() {
+    final isUnit = widget.attemptKind == 'unit';
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -213,10 +248,10 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
           children: [
             const Mascot(pose: MascotPose.sleepy, size: 120),
             const SizedBox(height: 24),
-            const Text(
-              'قلوبك خلصت!',
+            Text(
+              isUnit ? 'قلوب التمرين خلصت!' : 'قلوبك خلصت!',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'BeVietnamPro',
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
@@ -224,26 +259,29 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'استنى وارجع',
+            Text(
+              isUnit ? 'غلطت 5 مرات — ارجع وحاول من جديد' : 'استنى وارجع',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'BeVietnamPro',
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: HaffarColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'كل ${GameConstants.heartRegenInterval.inMinutes} دقائق بيرجع قلب',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                color: HaffarColors.textSecondary,
+            // Unit pool is private per attempt — no regen countdown.
+            if (!isUnit) ...[
+              const SizedBox(height: 12),
+              Text(
+                'كل ${GameConstants.heartRegenInterval.inMinutes} دقائق بيرجع قلب',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 14,
+                  color: HaffarColors.textSecondary,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -251,36 +289,13 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
   }
 
   Widget _heartsDepletedButton() {
+    final isUnit = widget.attemptKind == 'unit';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: GestureDetector(
-        onTap: () => context.pop(),
-        child: Container(
-          width: double.infinity,
-          height: 44,
-          decoration: BoxDecoration(
-            color: HaffarColors.primary,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(
-                color: HaffarColors.primaryDark,
-                offset: Offset(0, 4),
-                blurRadius: 0,
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              'حسنا',
-              style: TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
+      child: HaffarPrimaryButton(
+        label: isUnit ? 'ارجع للتمرين' : 'حسنا',
+        fullWidth: true,
+        onPressed: () => context.pop(),
       ),
     );
   }
@@ -295,7 +310,7 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
             children: [
               const Spacer(flex: 3),
               const HaffarSpeechBubble(
-                message: 'يلا تعال نصلح اخطاءك ونظبط الفاتنا',
+                message: 'يلا تعال نصلح اخطائك ونظبط الفاتنا!',
                 tailPosition: BubbleTailPosition.center,
               ),
               const SizedBox(height: 12),
@@ -315,8 +330,10 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
   Widget _fixIntroButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: GestureDetector(
-        onTap: () {
+      child: HaffarPrimaryButton(
+        label: 'حسنا',
+        fullWidth: true,
+        onPressed: () {
           final pool = context.read<ContentProvider>().questionsOf(
             widget.subjectId,
           );
@@ -329,32 +346,69 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
             _quiz.currentQuestion = q;
           });
         },
-        child: Container(
-          width: double.infinity,
-          height: 44,
-          decoration: BoxDecoration(
-            color: HaffarColors.primary,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: const [
-              BoxShadow(
-                color: HaffarColors.primaryDark,
-                offset: Offset(0, 4),
-                blurRadius: 0,
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              'حسنا',
-              style: TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+      ),
+    );
+  }
+
+  Widget _unitIntroHeader() {
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () => context.pop(),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                color: HaffarColors.grey2,
+                size: 24,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _unitIntroBody() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const Spacer(flex: 3),
+              const HaffarSpeechBubble(
+                message:
+                    'الخمسة قلوب دي ليك كل غلط حيخسرك قلب حافظ عليهم ، '
+                    'عشان تنجح في الوحدة',
+                tailPosition: BubbleTailPosition.center,
+              ),
+              const SizedBox(height: 12),
+              Image.asset(
+                'assets/character/holding_hearts.png',
+                width: 260,
+                height: 260,
+                fit: BoxFit.contain,
+              ),
+              const Spacer(flex: 3),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _unitIntroButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: HaffarPrimaryButton(
+        label: 'حسنا',
+        fullWidth: true,
+        onPressed: () => setState(() => _unitIntroVisible = false),
       ),
     );
   }
@@ -380,7 +434,11 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
   }
 
   Widget _buildHeader() {
-    final heartsToShow = context.watch<EconomyProvider>().hearts;
+    final economy = context.watch<EconomyProvider>();
+    final isUnit = widget.attemptKind == 'unit';
+    final heartsToShow = isUnit ? _quiz.localHearts : economy.hearts;
+    // Subscribers get unlimited hearts on lessons/review (unit pool is private).
+    final showInfinite = economy.isSubscribed && !isUnit;
     return SafeArea(
       top: true,
       bottom: false,
@@ -391,30 +449,9 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
             LearnTopBar(
               progress: _quiz.progress,
               hearts: heartsToShow,
+              showInfinite: showInfinite,
               onClose: () => context.pop(),
             ),
-            if (_quiz.isFixPhase) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: HaffarColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'مرحلة تصحيح الأخطاء (${_quiz.fixPhaseIndex + 1}/${_quiz.fixPhaseQuestionIds.length})',
-                  style: const TextStyle(
-                    fontFamily: 'BeVietnamPro',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: HaffarColors.primary,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -423,6 +460,18 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_unitIntroVisible) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            _unitIntroHeader(),
+            Expanded(child: _unitIntroBody()),
+            SafeArea(top: false, child: _unitIntroButton()),
+          ],
+        ),
+      );
+    }
     if (_quiz.isHeartsDepleted) {
       return Scaffold(
         backgroundColor: HaffarColors.bgPage,
@@ -461,16 +510,27 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
                         ? const NeverScrollableScrollPhysics()
                         : const BouncingScrollPhysics(),
                     padding: const EdgeInsets.only(bottom: 32),
-                    child: QuestionWidgetFactory.create(
-                      question: _quiz.currentQuestion,
-                      subjectName: widget.title,
-                      lessonNumber: _quiz.displayLessonNumber,
-                      customTitle: widget.title,
-                      onBack: () => context.pop(),
-                      onSkip: _nextQuestion,
-                      onNext: _nextQuestion,
-                      onSubmitAnswer: _submitAnswer,
-                      locked: _quiz.answered,
+                    // Key remounts the question on fix-phase retry so
+                    // submitted/fill/order state resets for a fresh answer.
+                    child: KeyedSubtree(
+                      key: ValueKey(
+                        _quiz.isFixPhase
+                            ? 'fix:${_quiz.currentQuestion.id}:'
+                                  '${_quiz.fixRetryCount}'
+                            : 'main:${_quiz.currentQuestion.id}:'
+                                  '${_quiz.questionIndex}',
+                      ),
+                      child: QuestionWidgetFactory.create(
+                        question: _quiz.currentQuestion,
+                        subjectName: widget.title,
+                        lessonNumber: _quiz.displayLessonNumber,
+                        customTitle: widget.title,
+                        onBack: () => context.pop(),
+                        onSkip: _nextQuestion,
+                        onNext: _nextQuestion,
+                        onSubmitAnswer: _submitAnswer,
+                        locked: _quiz.answered,
+                      ),
                     ),
                   ),
                 ),

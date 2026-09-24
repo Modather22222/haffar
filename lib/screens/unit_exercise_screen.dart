@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/content_provider.dart';
-import '../providers/economy_provider.dart';
 import '../models/question.dart';
 import '../models/unit.dart';
 import '../services/lesson_unlocks.dart';
@@ -36,22 +35,19 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
   void initState() {
     super.initState();
     final content = context.read<ContentProvider>();
-    final economy = context.read<EconomyProvider>();
-    // Gate + display below must reflect the DB truth, not a stale cache.
-    economy.syncHeartsFromServer();
+    // Unit uses a private 5-heart pool per attempt — never global hearts.
     final pool = content.getUnitQuestions(widget.subjectId, widget.unitIndex);
     _questions = buildUnitQuiz(
       subjectId: widget.subjectId,
       unitIndex: widget.unitIndex,
       pool: pool,
-      count: 6,
+      count: 10,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final questions = _questions;
-    final hearts = context.watch<EconomyProvider>().hearts;
     return Scaffold(
       backgroundColor: HaffarColors.bgPage,
       appBar: AppBar(
@@ -123,31 +119,21 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: hearts <= 0
-                      ? HaffarColors.error.withValues(alpha: 0.08)
-                      : HaffarColors.primary.withValues(alpha: 0.08),
+                  color: HaffarColors.primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    Icon(
-                      Icons.favorite,
-                      size: 22,
-                      color: hearts <= 0
-                          ? HaffarColors.error
-                          : HaffarColors.primary,
-                    ),
-                    const SizedBox(width: 10),
+                    Icon(Icons.favorite, size: 22, color: HaffarColors.primary),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'الخمسة قلوب دي ليك كل غلط هيخسرك قلب حافظ عليهم، عشان تنجح في الوحدة',
+                        'كل محاولة ليها 5 قلوب خاصة — كل غلط هيخسرك قلب، لو خلصوا ترجع وتبدأ من جديد',
                         style: TextStyle(
                           fontFamily: 'PlusJakartaSans',
                           fontSize: 14,
                           height: 1.6,
-                          color: hearts <= 0
-                              ? HaffarColors.error
-                              : HaffarColors.textSecondary,
+                          color: HaffarColors.textSecondary,
                         ),
                       ),
                     ),
@@ -190,11 +176,8 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                 height: 56,
                 child: Builder(
                   builder: (btnCtx) {
-                    final isSubscribed = context
-                        .watch<EconomyProvider>()
-                        .isSubscribed;
-                    final canStart =
-                        questions.isNotEmpty && (hearts > 0 || isSubscribed);
+                    // Private 5-heart pool — never gated on global hearts.
+                    final canStart = questions.isNotEmpty;
                     return ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: canStart
@@ -215,11 +198,9 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                             )
                           : null,
                       icon: const Icon(Icons.play_arrow, size: 26),
-                      label: Text(
-                        hearts <= 0 && !isSubscribed
-                            ? 'انتهت القلوب'
-                            : 'ابدأ تمرين الوحدة',
-                        style: const TextStyle(
+                      label: const Text(
+                        'ابدأ تمرين الوحدة',
+                        style: TextStyle(
                           fontFamily: 'BeVietnamPro',
                           fontSize: 18,
                           fontWeight: FontWeight.w700,

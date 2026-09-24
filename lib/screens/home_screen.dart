@@ -10,6 +10,7 @@ import '../providers/content_provider.dart';
 import '../providers/progress_provider.dart';
 import '../design_system/colors.dart';
 import '../models/subject.dart';
+import '../utils/game_constants.dart';
 import '../utils/routes.dart';
 import '../widgets/xp_icon.dart';
 import 'leaderboard_screen.dart';
@@ -31,14 +32,21 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<EconomyProvider>().syncHeartsFromServer();
+      if (!mounted) return;
+      final economy = context.read<EconomyProvider>();
+      economy.syncHeartsFromServer();
+      // Entering the app re-checks the streak (missed day → 0) on the server.
+      economy.refreshStreakFromServer();
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       _tick++;
       final economy = context.read<EconomyProvider>();
       final rem = economy.heartsRegenRemaining;
-      if (rem != null && rem.inMilliseconds <= 500 && economy.hearts < 7) {
+      // Sync once when a heart is due, then every 30s to stay fresh.
+      if (rem != null &&
+          rem <= Duration.zero &&
+          economy.hearts < GameConstants.maxHearts) {
         economy.syncHeartsFromServer();
       } else if (_tick % 30 == 0) {
         economy.syncHeartsFromServer();
@@ -63,7 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } else if (_activeTab == 2) {
       body = ProfileScreen(onBack: () => setState(() => _activeTab = 0));
     } else {
-      body = const SafeArea(child: _HomeTab());
+      // Not const: the 1s timer's setState must rebuild this subtree so the
+      // heart-regen countdown re-reads heartsRegenRemaining every tick.
+      body = SafeArea(child: _HomeTab());
     }
     return Scaffold(body: body, bottomNavigationBar: _bottomNav());
   }
@@ -336,6 +346,36 @@ class _HomeTab extends StatelessWidget {
   }
 
   Widget _statChipHeart(EconomyProvider economy) {
+    // Subscribers have unlimited hearts — show ∞ with no regen countdown.
+    if (economy.isSubscribed) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: HaffarColors.surfaceHigh,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              'assets/icons/heart_small.svg',
+              width: 16,
+              height: 16,
+            ),
+            const SizedBox(width: 4),
+            const Text(
+              '∞',
+              style: TextStyle(
+                fontFamily: 'BeVietnamPro',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: HaffarColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     final hearts = economy.hearts;
     final isFull = hearts >= 7;
     final rem = economy.heartsRegenRemaining;

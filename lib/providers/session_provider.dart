@@ -113,6 +113,9 @@ class SessionProvider extends ChangeNotifier {
         completedUnitKeys: results[2] as List<String>,
       );
       await economy.syncHeartsFromServer();
+      // Missed-day guard: zero the streak on the server (and locally) if the
+      // last completion was more than a day ago, right after hydrating.
+      await economy.refreshStreakFromServer();
       lastInitError = null;
       AppLog.info('initUserData OK hearts=${economy.hearts} xp=${economy.xp}');
     } catch (e, st) {
