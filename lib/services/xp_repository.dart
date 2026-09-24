@@ -42,6 +42,25 @@ class XpRepository {
     return rows.first as Map<String, dynamic>;
   }
 
+  /// League week window + server NOW(), for anchoring the countdown the same
+  /// way get_hearts anchors the heart-regen countdown (server-remaining,
+  /// device-elapsed). Returns null when signed out or unparsable.
+  Future<LeagueWindow?> getLeagueWindow() async {
+    final result = await _client.rpc('league_week_window');
+    final rows = result as List<dynamic>;
+    if (rows.isEmpty) return null;
+    final row = rows.first as Map<String, dynamic>;
+    final start = DateTime.tryParse(
+      row['week_start'] as String? ?? '',
+    )?.toUtc();
+    final end = DateTime.tryParse(row['week_end'] as String? ?? '')?.toUtc();
+    final serverNow = DateTime.tryParse(
+      row['server_now'] as String? ?? '',
+    )?.toUtc();
+    if (start == null || end == null || serverNow == null) return null;
+    return LeagueWindow(start: start, end: end, serverNow: serverNow);
+  }
+
   /// Aggregates XP earned this league week (Saturday 00:00 → Friday 23:59:59
   /// Africa/Khartoum). The window is computed server-side.
   Future<int> getWeeklyXp() async {
@@ -72,4 +91,16 @@ class XpRepository {
         .map((row) => row as Map<String, dynamic>)
         .toList();
   }
+}
+
+/// Server-anchored league week window (Sat 00:00 → Fri 23:59:59 Khartoum).
+class LeagueWindow {
+  final DateTime start;
+  final DateTime end;
+  final DateTime serverNow;
+  const LeagueWindow({
+    required this.start,
+    required this.end,
+    required this.serverNow,
+  });
 }

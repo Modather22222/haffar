@@ -2,6 +2,7 @@ import '../design_system/colors.dart';
 import '../services/xp_repository.dart';
 import '../utils/app_error.dart';
 import '../utils/routes.dart';
+import '../widgets/league_countdown.dart';
 import '../widgets/xp_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +17,18 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  static const _medals = ['🥇', '🥈', '🥉'];
+  static const _medalBg = {
+    1: Color(0xFFFFF7DF), // gold
+    2: Color(0xFFF4F5F6), // silver
+    3: Color(0xFFFBEADF), // bronze
+  };
+  static const _medalBorder = {
+    1: Color(0xFFE6B800),
+    2: Color(0xFFB9BDC2),
+    3: HaffarColors.leagueBronze,
+  };
+
   List<Map<String, dynamic>> _entries = [];
   bool _loading = true;
   String? _error;
@@ -111,7 +124,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+              LeagueCountdown(onWeekRollover: _loadLeaderboard),
+              const SizedBox(height: 20),
               if (_loading)
                 const Expanded(
                   child: Center(
@@ -164,13 +179,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                   ),
                 )
-              else ...[
-                _buildPodium(),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
+              else
                 Expanded(child: _buildList()),
-              ],
             ],
           ),
         ),
@@ -178,102 +188,27 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _buildPodium() {
-    if (_entries.length < 3) return const SizedBox.shrink();
-    final top3 = _entries.take(3).toList();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _podiumCard(top3[1], rank: 2),
-        _podiumCard(top3[0], rank: 1),
-        _podiumCard(top3[2], rank: 3),
-      ],
-    );
-  }
-
-  Widget _podiumCard(Map<String, dynamic> entry, {required int rank}) {
-    final heights = <int, double>{1: 130, 2: 100, 3: 80};
-    final medals = <int, String>{1: '🥇', 2: '🥈', 3: '🥉'};
-    final isCurrent = entry['is_current_user'] == true;
-    final color = rank == 1
-        ? HaffarColors.primary
-        : isCurrent
-        ? HaffarColors.leagueBronze
-        : HaffarColors.surfaceHigh;
-    return InkWell(
-      onTap: () => _openProfile(entry),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(
-          children: [
-            Text(
-              medals[rank] ?? '#$rank',
-              style: const TextStyle(fontSize: 28),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              width: 60,
-              height: heights[rank]!,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(8),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  '#$rank',
-                  style: const TextStyle(
-                    fontFamily: 'BeVietnamPro',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              (entry['display_name'] as String?) ?? 'البطل',
-              style: const TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${entry['week_xp']}',
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 10,
-                    color: HaffarColors.outline,
-                  ),
-                ),
-                const SizedBox(width: 3),
-                const XpIcon(size: 12),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildList() {
-    final entries = _entries.length > 3 ? _entries.skip(3).toList() : [];
-    if (entries.isEmpty) return const SizedBox.shrink();
     return ListView.builder(
-      itemCount: entries.length,
+      itemCount: _entries.length,
       itemBuilder: (ctx, i) {
-        final entry = entries[i];
-        final rank = i + 4;
+        final entry = _entries[i];
+        final rank = i + 1;
         final isCurrent = entry['is_current_user'] == true;
+        final medal = rank <= 3 ? _medals[rank - 1] : null;
+
+        // Top 3 get medal-tinted rows; "you" keeps the primary border.
+        var bg = isCurrent
+            ? HaffarColors.primary.withValues(alpha: 0.1)
+            : Colors.white;
+        var border = isCurrent
+            ? HaffarColors.primary
+            : HaffarColors.outline.withValues(alpha: 0.1);
+        if (medal != null) {
+          bg = _medalBg[rank]!;
+          border = isCurrent ? HaffarColors.primary : _medalBorder[rank]!;
+        }
+
         return InkWell(
           onTap: () => _openProfile(entry),
           borderRadius: BorderRadius.circular(12),
@@ -281,30 +216,31 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isCurrent
-                  ? HaffarColors.primary.withValues(alpha: 0.1)
-                  : Colors.white,
+              color: bg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isCurrent
-                    ? HaffarColors.primary
-                    : HaffarColors.outline.withValues(alpha: 0.1),
-              ),
+              border: Border.all(color: border),
             ),
             child: Row(
               children: [
-                Text(
-                  '#$rank',
-                  style: TextStyle(
-                    fontFamily: 'BeVietnamPro',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: isCurrent
-                        ? HaffarColors.primary
-                        : HaffarColors.textSecondary,
+                SizedBox(
+                  width: 32,
+                  child: Center(
+                    child: medal != null
+                        ? Text(medal, style: const TextStyle(fontSize: 18))
+                        : Text(
+                            '#$rank',
+                            style: TextStyle(
+                              fontFamily: 'BeVietnamPro',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: isCurrent
+                                  ? HaffarColors.primary
+                                  : HaffarColors.textSecondary,
+                            ),
+                          ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: isCurrent
@@ -334,6 +270,28 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (isCurrent) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: HaffarColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'انت',
+                          style: TextStyle(
+                            fontFamily: 'BeVietnamPro',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: HaffarColors.primaryDark,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     Text(
                       '${entry['week_xp']}',
                       style: const TextStyle(
