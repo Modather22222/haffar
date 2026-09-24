@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -123,22 +124,47 @@ class PushService {
   void _onForegroundMessage(RemoteMessage message) {
     final n = message.notification;
     if (n == null) return;
-    unawaited(
-      _local.show(
+    unawaited(_showForegroundNotification(n));
+  }
+
+  Future<void> _showForegroundNotification(RemoteNotification n) async {
+    try {
+      final icon = await _loadStreakIcon();
+      await _local.show(
         id: n.hashCode,
         title: n.title,
         body: n.body,
-        notificationDetails: const NotificationDetails(
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,
             _channelName,
             channelDescription: _channelDesc,
             importance: Importance.high,
             priority: Priority.high,
+            largeIcon: icon == null ? null : ByteArrayAndroidBitmap(icon),
           ),
           iOS: DarwinNotificationDetails(),
         ),
-      ),
-    );
+      );
+    } catch (e, st) {
+      AppLog.error('PushService foreground show', e, st);
+    }
+  }
+
+  Uint8List? _streakIcon;
+
+  /// Flame PNG used as the notification's large icon (mirrors FCM's image).
+  Future<Uint8List?> _loadStreakIcon() async {
+    if (_streakIcon != null) return _streakIcon;
+    try {
+      final data = await rootBundle.load('assets/icons/streak.png');
+      _streakIcon = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+    } catch (e, st) {
+      AppLog.error('PushService load streak icon', e, st);
+    }
+    return _streakIcon;
   }
 }

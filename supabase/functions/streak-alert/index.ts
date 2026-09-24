@@ -13,6 +13,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const CHANNEL_ID = "streak_alerts";
+// Publicly hosted flame icon shown as the notification's large image.
+const STREAK_IMAGE_URL =
+  "https://qfngbhrlqyojfwoadher.supabase.co/storage/v1/object/public/assets/icons/streak.png";
 
 interface ServiceAccount {
   project_id: string;
@@ -148,11 +151,14 @@ Deno.serve(async (req) => {
                 token: t.token,
                 notification: {
                   body:
-                    `يا بطل streak بتاعك في خطر! ما قريت اليوم ادخل هسي قبل ما تخسر ${u.streak} يوم!`,
+                    `يا بطل streak 🔥 بتاعك في خطر! ما قريت اليوم ادخل هسي قبل ما تخسر ${u.streak} يوم!`,
                 },
                 android: {
                   priority: "high",
-                  notification: { channel_id: CHANNEL_ID },
+                  notification: {
+                    channel_id: CHANNEL_ID,
+                    image: STREAK_IMAGE_URL,
+                  },
                 },
                 data: { type: "streak_alert" },
               },
