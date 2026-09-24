@@ -1,5 +1,6 @@
 import '../design_system/colors.dart';
 import '../services/xp_repository.dart';
+import '../utils/app_error.dart';
 import '../utils/routes.dart';
 import '../widgets/xp_icon.dart';
 import 'package:flutter/material.dart';
@@ -26,15 +27,22 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Future<void> _loadLeaderboard() async {
-    final client = Supabase.instance.client;
-    final uid = client.auth.currentUser?.id;
-    if (uid == null) {
-      setState(() {
-        _loading = false;
-      });
-      return;
-    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
+      final client = Supabase.instance.client;
+      final uid = client.auth.currentUser?.id;
+      if (uid == null) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = AppError.notSignedIn;
+          });
+        }
+        return;
+      }
       final entries = await XpRepository(client).getLeaderboard(20);
       if (mounted) {
         setState(() {
@@ -46,7 +54,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = e.toString();
+          _error = AppError.userMessage(
+            e,
+            fallback: 'تعذر تحميل لوحة الصدارة — حاول مرة أخرى',
+          );
         });
       }
     }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../design_system/colors.dart';
 import '../services/xp_repository.dart';
+import '../utils/app_error.dart';
+import '../utils/app_logger.dart';
 import '../widgets/profile_view.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -45,11 +47,15 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         _profile = profile;
         _loading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      AppLog.error('public profile load failed', e, st);
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = AppError.userMessage(
+          e,
+          fallback: 'تعذر تحميل الملف الشخصي — حاول مرة أخرى',
+        );
       });
     }
   }

@@ -197,7 +197,7 @@ class _OnboardingTenScreenState extends State<OnboardingTenScreen> {
                       label: 'استمر',
                       onPressed: _selectedIndex == null
                           ? null
-                          : () => context.push(Routes.onboardingEleven),
+                          : () => context.push(Routes.onboardingTwelve),
                     ),
                   ),
                 ),

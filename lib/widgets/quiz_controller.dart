@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/question.dart';
 import '../models/quiz_attempt.dart';
+import '../utils/app_logger.dart';
 import '../utils/game_constants.dart';
 
 /// Outcome emitted by [QuizController.finish].
@@ -234,7 +235,10 @@ class QuizController extends ChangeNotifier {
             refIndex: attemptRefIndex,
             details: results,
           )
-          .catchError((_) {}),
+          .catchError((Object e, StackTrace st) {
+            // Attempt history is non-critical — never block the quiz UX.
+            AppLog.error('saveAttempt failed', e, st);
+          }),
     );
   }
 }

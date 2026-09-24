@@ -9,6 +9,8 @@ import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
 import '../providers/progress_provider.dart';
+import '../utils/app_logger.dart';
+import '../utils/app_toast.dart';
 import '../utils/routes.dart';
 
 class OnboardingSevenScreen extends StatefulWidget {
@@ -30,18 +32,41 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
   Future<void> _toggleNotifications(bool value) async {
     setState(() => _notifications = value);
     if (value) {
-      final status = await Permission.notification.request();
-      if (mounted && status.isDenied) {
+      try {
+        final status = await Permission.notification.request();
+        if (mounted && status.isDenied) {
+          setState(() => _notifications = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('يجب السماح بالإشعارات لتفعيلها'),
+              backgroundColor: HaffarColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (mounted && status.isPermanentlyDenied) {
+          setState(() => _notifications = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'الإشعارات مرفوضة نهائياً — فعّلها من إعدادات الجهاز',
+              ),
+              backgroundColor: HaffarColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else if (mounted) {
+          context.read<ProgressProvider>().enableNotifications();
+        }
+      } catch (e, st) {
+        AppLog.error('notification permission request failed', e, st);
+        if (!mounted) return;
         setState(() => _notifications = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يجب السماح بالإشعارات لتفعيلها'),
-            backgroundColor: HaffarColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppToast.error(
+          e,
+          fallback: 'تعذر طلب إذن الإشعارات — حاول مرة أخرى',
+          logContext: 'notification permission',
+          st: st,
         );
-      } else if (mounted) {
-        context.read<ProgressProvider>().enableNotifications();
       }
     } else {
       context.read<ProgressProvider>().enableNotifications();

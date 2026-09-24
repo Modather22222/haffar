@@ -5,6 +5,7 @@ import '../models/lesson.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
 import '../services/content_repository.dart';
+import '../utils/app_error.dart';
 import '../utils/app_logger.dart';
 
 // ContentStatus lives here; AppProvider re-exports it for existing imports.
@@ -14,6 +15,9 @@ enum ContentStatus { loading, loaded, error }
 /// Loaded once at startup; read-only for the rest of the session.
 class ContentProvider extends ChangeNotifier {
   ContentStatus status = ContentStatus.loading;
+
+  /// Arabic user-facing message when [status] is [ContentStatus.error].
+  String? errorMessage;
   List<Subject> _subjects = const [];
   Map<String, List<Lesson>> _lessonsBySubject = {};
   Map<String, List<Question>> _questionsBySubject = {};
@@ -63,6 +67,7 @@ class ContentProvider extends ChangeNotifier {
 
   Future<void> loadContent() async {
     status = ContentStatus.loading;
+    errorMessage = null;
     notifyListeners();
     try {
       final repo = ContentRepository(Supabase.instance.client);
@@ -83,9 +88,11 @@ class ContentProvider extends ChangeNotifier {
             .add(question);
       }
       status = ContentStatus.loaded;
+      errorMessage = null;
     } catch (e, st) {
       AppLog.error('loadContent FAILED', e, st);
       status = ContentStatus.error;
+      errorMessage = AppError.userMessage(e, fallback: AppError.contentLoad);
     }
     notifyListeners();
   }

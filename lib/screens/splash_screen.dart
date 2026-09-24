@@ -7,6 +7,7 @@ import '../providers/content_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/session_provider.dart';
 import '../utils/app_logger.dart';
+import '../utils/app_toast.dart';
 import '../utils/routes.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -61,19 +62,29 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 800));
       await content.loadContent();
       AppLog.info('loadContent retry status=${content.status}');
+      if (content.status == ContentStatus.error) {
+        AppToast.show(
+          content.errorMessage ?? 'تعذر تحميل المحتوى — حاول مرة أخرى',
+          isError: true,
+          duration: const Duration(seconds: 5),
+        );
+      }
     }
     await session.initUserData();
     AppLog.info(
       'initUserData done sync=${session.remoteSyncEnabled} '
-      'loggedIn=${progress.hasLoggedIn} onboarded=${progress.hasCompletedOnboarding} '
+      'signedIn=${session.isSignedIn} '
+      'onboarded=${progress.hasCompletedOnboarding} '
       'subject=${progress.selectedSubjectId}',
     );
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    if (!progress.hasLoggedIn ||
-        !progress.hasCompletedOnboarding ||
+    if (!session.isSignedIn) {
+      AppLog.info('route -> onboarding (no session)');
+      context.go(Routes.welcome);
+    } else if (!progress.hasCompletedOnboarding ||
         progress.selectedSubjectId == null) {
-      AppLog.info('route -> onboarding');
+      AppLog.info('route -> onboarding (session, incomplete)');
       context.go(Routes.welcome);
     } else {
       AppLog.info('route -> home');

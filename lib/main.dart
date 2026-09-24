@@ -11,7 +11,9 @@ import 'providers/content_provider.dart';
 import 'providers/economy_provider.dart';
 import 'providers/progress_provider.dart';
 import 'providers/session_provider.dart';
+import 'utils/app_error.dart';
 import 'utils/app_logger.dart';
+import 'utils/app_toast.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_one_screen.dart';
 import 'screens/sign_in_loading_screen.dart';
@@ -40,7 +42,10 @@ import 'screens/onboarding_seven_screen.dart';
 import 'screens/onboarding_eight_screen.dart';
 import 'screens/onboarding_nine_screen.dart';
 import 'screens/onboarding_ten_screen.dart';
-import 'screens/onboarding_eleven_screen.dart';
+import 'screens/onboarding_twelve_screen.dart';
+import 'screens/onboarding_thirteen_screen.dart';
+import 'screens/onboarding_fourteen_screen.dart';
+import 'screens/onboarding_fifteen_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'models/question.dart';
 import 'models/subject.dart';
@@ -156,6 +161,7 @@ class _HaffarAppState extends State<HaffarApp> {
       child: MaterialApp.router(
         title: 'حفار',
         debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
         builder: (_, child) =>
             Directionality(textDirection: TextDirection.rtl, child: child!),
         locale: const Locale('ar', 'SA'),
@@ -186,8 +192,8 @@ class _HaffarAppState extends State<HaffarApp> {
   }
 }
 
-/// Shown instead of the app when backend init fails — displays the actual
-/// error so a crash is never silent, with a retry button.
+/// Shown instead of the app when backend init fails — friendly Arabic copy
+/// with a retry button. Raw exception stays in logs only.
 class _InitErrorScreen extends StatelessWidget {
   final Object error;
   final bool retrying;
@@ -201,6 +207,7 @@ class _InitErrorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final detail = AppError.userMessage(error, fallback: AppError.network);
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -225,29 +232,13 @@ class _InitErrorScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'تحقق من الإنترنت ثم حاول مجدداً',
+              Text(
+                detail,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'PlusJakartaSans',
+                style: const TextStyle(
+                  fontFamily: 'BeVietnamPro',
                   fontSize: 14,
                   color: HaffarColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: HaffarColors.surfaceHigh,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SelectableText(
-                  error.toString(),
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
-                    fontSize: 12,
-                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -318,8 +309,20 @@ final GoRouter router = GoRouter(
       builder: (_, _) => const OnboardingTenScreen(),
     ),
     GoRoute(
-      path: Routes.onboardingEleven,
-      builder: (_, _) => const OnboardingElevenScreen(),
+      path: Routes.onboardingTwelve,
+      builder: (_, _) => const OnboardingTwelveScreen(),
+    ),
+    GoRoute(
+      path: Routes.onboardingThirteen,
+      builder: (_, _) => const OnboardingThirteenScreen(),
+    ),
+    GoRoute(
+      path: Routes.onboardingFourteen,
+      builder: (_, _) => const OnboardingFourteenScreen(),
+    ),
+    GoRoute(
+      path: Routes.onboardingFifteen,
+      builder: (_, _) => const OnboardingFifteenScreen(),
     ),
     GoRoute(path: Routes.signIn, builder: (_, _) => const SignInScreen()),
     GoRoute(path: Routes.login, builder: (_, _) => const LoginScreen()),
@@ -427,7 +430,78 @@ final GoRouter router = GoRouter(
       builder: (_, _) => const SignInLoadingScreen(),
     ),
   ],
+  errorBuilder: (_, state) =>
+      _RouteErrorScreen(location: state.uri.toString(), error: state.error),
 );
+
+/// Friendly Arabic page for unmatched routes / router errors.
+class _RouteErrorScreen extends StatelessWidget {
+  final String location;
+  final Object? error;
+
+  const _RouteErrorScreen({required this.location, this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('صفحة غير موجودة')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.explore_off_outlined,
+                size: 72,
+                color: HaffarColors.primary,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'تعذر فتح هذه الصفحة',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                location,
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(
+                  fontFamily: 'PlusJakartaSans',
+                  fontSize: 13,
+                  color: HaffarColors.textSecondary,
+                ),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  AppError.userMessage(error!),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: 14,
+                    color: HaffarColors.textSecondary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go(Routes.home),
+                child: const Text('العودة للرئيسية'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class HaffarTheme {
   HaffarTheme._();

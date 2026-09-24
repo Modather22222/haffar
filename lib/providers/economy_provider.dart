@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/hearts_repository.dart';
 import '../services/xp_repository.dart';
+import '../utils/app_logger.dart';
+import '../utils/app_toast.dart';
 import '../utils/game_constants.dart';
 
 /// Hearts, XP, streak, league — the game economy.
@@ -64,7 +66,11 @@ class EconomyProvider extends ChangeNotifier {
       final info = await _heartsRepo!.getHeartsInfo();
       _storeHeartsFetch(info);
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      // Background refresh — log only so timers don't spam snackbars.
+      AppLog.warn('refreshHearts failed: $e');
+      AppLog.error('refreshHearts', e, st);
+    }
   }
 
   /// Server-authoritative heart refresh — re-reads and applies regeneration.
@@ -74,17 +80,32 @@ class EconomyProvider extends ChangeNotifier {
   }
 
   /// Consumes a heart for a wrong answer. Subscribers skip lesson hearts.
-  /// Returns remaining hearts.
+  /// Returns remaining hearts. On server failure, still decrements locally
+  /// so the quiz never freezes, and surfaces a friendly error once.
   Future<int> consumeHeartForExam({required bool isUnitExam}) async {
     if (!remoteSyncEnabled || _heartsRepo == null) return hearts;
     if (isSubscribed && !isUnitExam) return hearts;
-    final remaining = await _heartsRepo!.consumeHeart(
-      reason: isUnitExam ? 'unit_wrong' : 'lesson_wrong',
-    );
-    hearts = remaining;
-    unawaited(syncHeartsFromServer());
-    notifyListeners();
-    return remaining;
+    try {
+      final remaining = await _heartsRepo!.consumeHeart(
+        reason: isUnitExam ? 'unit_wrong' : 'lesson_wrong',
+      );
+      hearts = remaining;
+      unawaited(syncHeartsFromServer());
+      notifyListeners();
+      return remaining;
+    } catch (e, st) {
+      AppLog.error('consumeHeart failed', e, st);
+      // Optimistic local decrement so the quiz keeps moving.
+      if (hearts > 0) hearts--;
+      notifyListeners();
+      AppToast.error(
+        e,
+        fallback: 'تعذر خصم القلب من الخادم — تم الخصم محلياً',
+        logContext: 'consumeHeart',
+        st: st,
+      );
+      return hearts;
+    }
   }
 
   /// Records an XP event server-side; mirrors the aggregate locally.
@@ -108,7 +129,11 @@ class EconomyProvider extends ChangeNotifier {
       );
       xp += amount;
       notifyListeners();
-    } catch (_) {
+    } catch (e, st) {
+      // Keep local XP so the player isn't punished for a flaky network;
+      // server will catch up on next successful event / profile refresh.
+      AppLog.warn('addXpEvent server failed, granting locally: $e');
+      AppLog.error('addXpEvent', e, st);
       xp += amount;
       notifyListeners();
     }
@@ -128,7 +153,9 @@ class EconomyProvider extends ChangeNotifier {
               as int;
       streak = newStreak;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      AppLog.error('updateStreakOnCompletion', e, st);
+    }
   }
 
   /// Local-only XP bump (no server event). Prefer [addXpEvent].

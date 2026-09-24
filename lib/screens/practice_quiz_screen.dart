@@ -16,6 +16,8 @@ import '../widgets/question_widgets/question_widget_factory.dart';
 import '../widgets/mascot.dart';
 import '../widgets/celebration_dialog.dart';
 import '../widgets/quiz_controller.dart';
+import '../utils/app_logger.dart';
+import '../utils/app_toast.dart';
 import '../utils/game_constants.dart';
 import '../utils/sound_manager.dart';
 
@@ -109,9 +111,16 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
     } else {
       SoundManager.playWrong(_quiz.currentQuestion.id);
       if (!_quiz.isFixPhase) {
-        await context.read<EconomyProvider>().consumeHeartForExam(
-          isUnitExam: widget.attemptKind == 'unit',
-        );
+        try {
+          await context.read<EconomyProvider>().consumeHeartForExam(
+            isUnitExam: widget.attemptKind == 'unit',
+          );
+        } catch (e, st) {
+          // EconomyProvider already falls back locally + toasts; this is a
+          // last-resort guard so the quiz never freezes on a thrown error.
+          AppLog.error('consumeHeart (screen)', e, st);
+          AppToast.error(e, fallback: 'تعذر خصم القلب — حاول مجدداً');
+        }
         if (mounted) setState(() {});
       }
     }

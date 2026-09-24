@@ -31,7 +31,10 @@ abstract class Routes {
   static const onboardingEight = '/onboarding/eight';
   static const onboardingNine = '/onboarding/nine';
   static const onboardingTen = '/onboarding/ten';
-  static const onboardingEleven = '/onboarding/eleven';
+  static const onboardingTwelve = '/onboarding/twelve';
+  static const onboardingThirteen = '/onboarding/thirteen';
+  static const onboardingFourteen = '/onboarding/fourteen';
+  static const onboardingFifteen = '/onboarding/fifteen';
   static const signIn = '/sign-in';
 }
 

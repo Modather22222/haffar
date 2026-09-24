@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/progress_repository.dart';
+import '../utils/app_logger.dart';
+import '../utils/app_toast.dart';
 
 /// Lesson/unit completions, unlock gates, onboarding flags, display name.
 /// Owns the only client-writable profile field (display_name via RPC).
@@ -13,6 +15,9 @@ class ProgressProvider extends ChangeNotifier {
 
   // ── Identity / flags ─────────────────────────────────────────────────────
   String userName = 'الحفار';
+
+  /// 'male' | 'female' — set during onboarding gender step.
+  String? gender;
   bool hasCompletedOnboarding = false;
   bool hasLoggedIn = false;
   bool notificationsEnabled = false;
@@ -53,7 +58,11 @@ class ProgressProvider extends ChangeNotifier {
 
   void completeSubjectLesson(String subjectId, int lessonIndex) {
     if (_completedSubjectLessons.add(_lessonKey(subjectId, lessonIndex))) {
-      _sync(() => _progressRepo!.saveCompletedLesson(subjectId, lessonIndex));
+      _sync(
+        () => _progressRepo!.saveCompletedLesson(subjectId, lessonIndex),
+        userVisible: true,
+        failMessage: 'تعذر حفظ تقدم الدرس على الخادم — سيُحاول لاحقاً',
+      );
       notifyListeners();
     }
   }
@@ -74,6 +83,8 @@ class ProgressProvider extends ChangeNotifier {
     if (_completedUnitExercises.add('$subjectId:$unitIndex')) {
       _sync(
         () => _progressRepo!.saveCompletedUnitExercise(subjectId, unitIndex),
+        userVisible: true,
+        failMessage: 'تعذر حفظ تقدم التمرين على الخادم — سيُحاول لاحقاً',
       );
       notifyListeners();
     }
@@ -81,6 +92,11 @@ class ProgressProvider extends ChangeNotifier {
 
   bool isUnitExerciseCompleted(String subjectId, int unitIndex) =>
       _completedUnitExercises.contains('$subjectId:$unitIndex');
+
+  void setGender(String value) {
+    gender = value;
+    notifyListeners();
+  }
 
   void login(String name) {
     userName = name;
@@ -125,21 +141,40 @@ class ProgressProvider extends ChangeNotifier {
     _completedSubjectLessons.clear();
     _completedUnitExercises.clear();
     selectedSubjectIds.clear();
-    _sync(() => _progressRepo!.clearAllProgress());
+    _sync(
+      () => _progressRepo!.clearAllProgress(),
+      userVisible: true,
+      failMessage: 'تعذر تصفير التقدم على الخادم — حاول مرة أخرى',
+    );
     notifyListeners();
   }
 
   /// Fire-and-forget remote write; failures never break local UX.
-  void _sync(Future<void> Function() task) {
+  /// Logs always; shows a snackbar when [userVisible].
+  void _sync(
+    Future<void> Function() task, {
+    bool userVisible = false,
+    String? failMessage,
+  }) {
     if (!remoteSyncEnabled || _progressRepo == null) return;
-    task().catchError((_) {});
+    task().catchError((Object e, StackTrace st) {
+      AppLog.error('progress sync failed', e, st);
+      if (userVisible) {
+        AppToast.error(e, fallback: failMessage, logContext: 'progress sync');
+      }
+      return null;
+    });
   }
 
   void _scheduleNameSave() {
     if (!remoteSyncEnabled || _progressRepo == null) return;
     _nameSaveTimer?.cancel();
     _nameSaveTimer = Timer(const Duration(milliseconds: 1500), () {
-      _sync(() => _progressRepo!.saveProfile(displayName: userName));
+      _sync(
+        () => _progressRepo!.saveProfile(displayName: userName),
+        userVisible: true,
+        failMessage: 'تعذر حفظ اسمك على الخادم',
+      );
     });
   }
 

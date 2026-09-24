@@ -8,8 +8,8 @@ import '../design_system/components/lesson/voice_bubble.dart';
 import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 
-class OnboardingElevenScreen extends StatelessWidget {
-  const OnboardingElevenScreen({super.key});
+class OnboardingFifteenScreen extends StatelessWidget {
+  const OnboardingFifteenScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

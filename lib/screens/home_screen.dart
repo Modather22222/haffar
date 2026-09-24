@@ -55,21 +55,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // One Scaffold for all three tabs so the bottom nav never disappears.
+    // Leaderboard/Profile bring their own nested Scaffold + AppBar.
+    final Widget body;
     if (_activeTab == 1) {
-      return LeaderboardScreen(onBack: () => setState(() => _activeTab = 0));
+      body = LeaderboardScreen(onBack: () => setState(() => _activeTab = 0));
+    } else if (_activeTab == 2) {
+      body = ProfileScreen(onBack: () => setState(() => _activeTab = 0));
+    } else {
+      body = const SafeArea(child: _HomeTab());
     }
-    if (_activeTab == 2) {
-      return ProfileScreen(onBack: () => setState(() => _activeTab = 0));
-    }
-    return Scaffold(
-      body: SafeArea(child: const _HomeTab()),
-      bottomNavigationBar: _bottomNav(),
-    );
+    return Scaffold(body: body, bottomNavigationBar: _bottomNav());
   }
 
   Widget _bottomNav() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(
@@ -99,14 +100,15 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Icon(
             icon,
-            size: 24,
+            size: 28,
             color: isActive ? HaffarColors.primary : HaffarColors.textSecondary,
           ),
+          const SizedBox(height: 4),
           Text(
             label,
             style: TextStyle(
               fontFamily: 'BeVietnamPro',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               color: isActive
                   ? HaffarColors.primary
@@ -176,22 +178,49 @@ class _HomeTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'المواد',
-                  style: TextStyle(
-                    fontFamily: 'BeVietnamPro',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                if (content.status == ContentStatus.error) ...[
+                  _ContentErrorBanner(message: content.errorMessage),
+                  const SizedBox(height: 16),
+                ] else if (content.status == ContentStatus.loading) ...[
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: CircularProgressIndicator(
+                        color: HaffarColors.primary,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: content.subjects
-                      .map((s) => _subjectCard(s, context))
-                      .toList(),
-                ),
+                ] else ...[
+                  const Text(
+                    'المواد',
+                    style: TextStyle(
+                      fontFamily: 'BeVietnamPro',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (content.subjects.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'لا توجد مواد متاحة حالياً',
+                        style: TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontSize: 15,
+                          color: HaffarColors.textSecondary,
+                        ),
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: content.subjects
+                          .map((s) => _subjectCard(s, context))
+                          .toList(),
+                    ),
+                ],
                 const SizedBox(height: 24),
               ],
             ),
@@ -380,6 +409,48 @@ class _HomeTab extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Inline banner when curriculum content failed to load — retry without
+/// leaving home.
+class _ContentErrorBanner extends StatelessWidget {
+  final String? message;
+
+  const _ContentErrorBanner({this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: HaffarColors.error.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: HaffarColors.error.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            message ?? 'تعذر تحميل المواد — تحقق من الإنترنت',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'BeVietnamPro',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: HaffarColors.error,
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.read<ContentProvider>().loadContent(),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('إعادة المحاولة'),
+          ),
+        ],
+      ),
     );
   }
 }

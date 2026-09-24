@@ -1,9 +1,55 @@
 import '../design_system/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/session_provider.dart';
+import '../utils/routes.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _signOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'تسجيل الخروج',
+          style: TextStyle(
+            fontFamily: 'BeVietnamPro',
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        content: const Text(
+          'هل تريد الخروج من حسابك؟',
+          style: TextStyle(
+            fontFamily: 'BeVietnamPro',
+            fontSize: 15,
+            color: HaffarColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('خروج', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    // Always leave settings — local state clears even if the server call
+    // fails; SessionProvider surfaces any server error via AppToast.
+    await context.read<SessionProvider>().signOut();
+    if (!context.mounted) return;
+    context.go(Routes.welcome);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +79,13 @@ class SettingsScreen extends StatelessWidget {
             ),
             _tile(Icons.language, 'اللغة', 'العربية'),
             _tile(Icons.palette, 'المظهر', 'فاتح'),
+            const SizedBox(height: 24),
+            _tile(
+              Icons.logout,
+              'تسجيل الخروج',
+              'الخروج من الحساب الحالي',
+              onTap: () => _signOut(context),
+            ),
             const SizedBox(height: 24),
           ],
         ),

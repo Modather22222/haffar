@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/progress_provider.dart';
+import '../utils/app_toast.dart';
 import '../utils/routes.dart';
 import '../widgets/mascot.dart';
 
@@ -61,10 +62,12 @@ class SignupScreen extends StatelessWidget {
                   ),
                   onPressed: () {
                     final name = nameController.text.trim();
-                    if (name.isNotEmpty) {
-                      context.read<ProgressProvider>().login(name);
-                      context.go(Routes.home);
+                    if (name.isEmpty) {
+                      AppToast.show('اكتب اسمك أولاً', isError: true);
+                      return;
                     }
+                    context.read<ProgressProvider>().login(name);
+                    context.go(Routes.home);
                   },
                   child: const Text(
                     'إنشاء الحساب',
