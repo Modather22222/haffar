@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/hearts_repository.dart';
 import '../services/progress_repository.dart';
+import '../services/push_service.dart';
 import '../services/xp_repository.dart';
 import '../utils/app_error.dart';
 import '../utils/app_logger.dart';
@@ -116,6 +117,8 @@ class SessionProvider extends ChangeNotifier {
       // Missed-day guard: zero the streak on the server (and locally) if the
       // last completion was more than a day ago, right after hydrating.
       await economy.refreshStreakFromServer();
+      // Register this device for push (FCM token → push_tokens).
+      unawaited(PushService.instance.register());
       lastInitError = null;
       AppLog.info('initUserData OK hearts=${economy.hearts} xp=${economy.xp}');
     } catch (e, st) {
@@ -138,6 +141,8 @@ class SessionProvider extends ChangeNotifier {
   /// Returns true when sign-out completed (local clear always happens).
   Future<bool> signOut() async {
     try {
+      // Drop the device token first — RLS needs the still-signed-in uid.
+      await PushService.instance.unregister();
       await AuthService(Supabase.instance.client).signOut();
       return true;
     } catch (e, st) {

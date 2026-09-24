@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1047327607183",
+    "project_id": "haffar-app",
+    "storage_bucket": "haffar-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1047327607183:android:7742aab78b3d44cbb1a3fa",
+        "android_client_info": {
+          "package_name": "com.appy.haffar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQVa6d3Hy1zsilDnwqCWoE4Vs0Y-kJFC0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

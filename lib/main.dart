@@ -33,6 +33,7 @@ import 'screens/achievements_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
+import 'services/push_service.dart';
 import 'screens/onboarding_two_screen.dart';
 import 'screens/onboarding_three_screen.dart';
 import 'screens/onboarding_four_screen.dart';
@@ -93,6 +94,8 @@ Future<void> main() async {
     AppLog.error('Supabase.initialize FAILED', e, st);
     initError = e;
   }
+  // Push is best-effort: logs on failure, never blocks startup.
+  await PushService.instance.init();
   AppLog.info('runApp (initError=${initError != null})');
   runApp(HaffarApp(initError: initError));
 }
