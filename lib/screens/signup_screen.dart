@@ -1,8 +1,8 @@
-﻿import '../design_system/colors.dart';
+import '../design_system/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
+import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 import '../widgets/mascot.dart';
 
@@ -35,7 +35,7 @@ class SignupScreen extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 16,
-                  color: Color(0xFF3f4a36),
+                  color: HaffarColors.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -62,7 +62,7 @@ class SignupScreen extends StatelessWidget {
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isNotEmpty) {
-                      context.read<AppProvider>().login(name);
+                      context.read<ProgressProvider>().login(name);
                       context.go(Routes.home);
                     }
                   },

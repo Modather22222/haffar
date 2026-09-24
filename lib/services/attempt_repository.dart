@@ -1,4 +1,4 @@
-﻿import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/quiz_attempt.dart';
 
 /// Saves and reads quiz attempts for the signed-in user.
@@ -29,7 +29,11 @@ class AttemptRepository {
     });
   }
 
-  Future<QuizAttempt?> fetchLastAttempt(String subjectId, String kind, int refIndex) async {
+  Future<QuizAttempt?> fetchLastAttempt(
+    String subjectId,
+    String kind,
+    int refIndex,
+  ) async {
     final uid = _uid;
     if (uid == null) return null;
     final rows = await _client

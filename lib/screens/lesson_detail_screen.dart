@@ -1,14 +1,15 @@
-﻿import '../design_system/colors.dart';
+import '../design_system/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
+import '../providers/content_provider.dart';
+import '../providers/progress_provider.dart';
 import '../models/lesson.dart';
 import '../models/question.dart';
 import '../models/unit.dart';
-import '../services/quiz_builder.dart';
+import '../services/lesson_unlocks.dart';
+import '../utils/routes.dart';
 import '../widgets/mascot.dart';
-import 'practice_quiz_screen.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   final String subjectId;
@@ -40,15 +41,14 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final provider = context.read<AppProvider>();
+    final content = context.read<ContentProvider>();
     _subjectName =
-        provider.subjectById(widget.subjectId)?.name ?? widget.subjectId;
-    _lesson = provider.lessonOf(widget.subjectId, widget.lessonIndex);
-    final pool = provider.getQuestions(widget.subjectId, widget.lessonIndex);
-    _quizQuestions = QuizBuilder.build(
-      'lesson:${widget.subjectId}:${widget.lessonIndex}',
-      pool,
-      count: 3,
+        content.subjectById(widget.subjectId)?.name ?? widget.subjectId;
+    _lesson = content.lessonOf(widget.subjectId, widget.lessonIndex);
+    _quizQuestions = buildLessonQuiz(
+      subjectId: widget.subjectId,
+      lessonIndex: widget.lessonIndex,
+      pool: content.getQuestions(widget.subjectId, widget.lessonIndex),
     );
   }
 
@@ -112,7 +112,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
                 fontSize: 14,
-                color: Color(0xFF3f4a36),
+                color: HaffarColors.textSecondary,
                 height: 1.6,
               ),
             ),
@@ -145,7 +145,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
                       style: const TextStyle(
                         fontFamily: 'PlusJakartaSans',
                         fontSize: 14,
-                        color: Color(0xFF3f4a36),
+                        color: HaffarColors.textSecondary,
                       ),
                     ),
                   ),
@@ -197,7 +197,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
   }
 
   void _markLessonUnderstood() {
-    context.read<AppProvider>().completeSubjectLesson(
+    context.read<ProgressProvider>().completeSubjectLesson(
       widget.subjectId,
       widget.lessonIndex,
     );
@@ -258,20 +258,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
             height: 52,
             width: 200,
             child: ElevatedButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PracticeQuizScreen(
-                    subjectId: widget.subjectId,
-                    title: '$_subjectName - $_lessonTitle',
-                    questions: _quizQuestions,
-                    attemptKind: 'lesson',
-                    attemptRefIndex: widget.lessonIndex,
-                    completionPose: MascotPose.cheer,
-                    completionTitle: 'أحسنت يا حفار!',
-                    completionMessage: 'أكملت جميع أسئلة هذا الدرس بنجاح',
-                  ),
-                ),
+              onPressed: () => context.push(
+                '${Routes.practiceQuiz}?'
+                'subject=${Uri.encodeComponent(widget.subjectId)}'
+                '&title=${Uri.encodeComponent('$_subjectName - $_lessonTitle')}'
+                '&kind=lesson&ref=${widget.lessonIndex}',
+                extra: _quizQuestions,
               ),
               child: const Text(
                 'ابدأ التمرين',
@@ -283,7 +275,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
               ),
             ),
           ),
-          ],
+        ],
       ),
     );
   }

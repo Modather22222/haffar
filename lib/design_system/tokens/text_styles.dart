@@ -5,7 +5,8 @@ import '../colors.dart';
 class HaffarTextStyles {
   HaffarTextStyles._();
 
-  static const String _family = 'DIN2014Rounded';
+  // BeVietnamPro is the only heavy face declared in pubspec.yaml.
+  static const String _family = 'BeVietnamPro';
 
   static const String fontFamily = _family;
 

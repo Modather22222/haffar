@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
-import 'onboarding_three_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingTwoScreen extends StatelessWidget {
   const OnboardingTwoScreen({super.key});
@@ -22,7 +23,10 @@ class OnboardingTwoScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       const Spacer(flex: 3),
-                       HaffarSpeechBubble(message: 'مرحباُ! أنا حفار', tailPosition: BubbleTailPosition.center),
+                      HaffarSpeechBubble(
+                        message: 'مرحبا! أنا حفار',
+                        tailPosition: BubbleTailPosition.center,
+                      ),
                       const SizedBox(height: 12),
                       Image.asset(
                         'assets/character/character (10).png',
@@ -34,13 +38,7 @@ class OnboardingTwoScreen extends StatelessWidget {
                         width: double.infinity,
                         child: HaffarPrimaryButton(
                           label: 'استمر',
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const OnboardingThreeScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: () => context.push(Routes.onboardingThree),
                         ),
                       ),
                       const SizedBox(height: 32),

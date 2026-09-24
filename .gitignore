@@ -55,3 +55,7 @@ opencode.json
 .vscode/mcp.json
 android/build/
 android/.kotlin/
+
+# Local Supabase defines (copy env.example.json → env.json)
+env.json
+

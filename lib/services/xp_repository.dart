@@ -10,8 +10,8 @@ class XpRepository {
 
   String? get _uid => _client.auth.currentUser?.id;
 
-  /// Inserts an XP event and returns the event id.
-  /// source must be one of: 'lesson', 'unit', 'review', 'bonus'.
+  /// Records an XP event via the validated add_xp_event RPC (also bumps
+  /// profiles.xp atomically). source: lesson|unit|review|bonus.
   Future<void> insertEvent({
     required int amount,
     required String source,
@@ -20,20 +20,36 @@ class XpRepository {
   }) async {
     final uid = _uid;
     if (uid == null) return;
-    await _client.from('xp_events').insert({
-      'user_id': uid,
-      'amount': amount,
-      'source': source,
-      'subject_id': subjectId,
-      'lesson_index': lessonIndex,
-    });
+    await _client.rpc(
+      'add_xp_event',
+      params: {
+        'p_amount': amount,
+        'p_source': source,
+        'p_subject_id': subjectId,
+        'p_lesson_index': lessonIndex,
+      },
+    );
+  }
+
+  /// Loads another user's public profile fields (SECURITY DEFINER RPC).
+  Future<Map<String, dynamic>?> fetchPublicProfile(String userId) async {
+    final result = await _client.rpc(
+      'get_public_profile',
+      params: {'p_user_id': userId},
+    );
+    final rows = result as List<dynamic>;
+    if (rows.isEmpty) return null;
+    return rows.first as Map<String, dynamic>;
   }
 
   /// Aggregates total XP earned this ISO week (Saturday 00:00 to Friday 23:59 Africa/Khartoum).
   Future<int> getWeeklyXp() async {
     final uid = _uid;
     if (uid == null) return 0;
-    final result = await _client.rpc('weekly_xp_summary', params: {'p_user_id': uid});
+    final result = await _client.rpc(
+      'weekly_xp_summary',
+      params: {'p_user_id': uid},
+    );
     final rows = result as List<dynamic>;
     if (rows.isEmpty) return 0;
     return (rows.first['week_xp'] as num).toInt();
@@ -47,11 +63,14 @@ class XpRepository {
     final startOfWeek = _startOfCurrentWeek();
 
     // Sum all xp_events for this week per user, join with profiles for display data
-    final result = await _client.rpc('get_weekly_leaderboard', params: {
-      'p_start': startOfWeek,
-      'p_limit': limit,
-      'p_current_user_id': uid,
-    });
+    final result = await _client.rpc(
+      'get_weekly_leaderboard',
+      params: {
+        'p_start': startOfWeek,
+        'p_limit': limit,
+        'p_current_user_id': uid,
+      },
+    );
 
     return (result as List<dynamic>)
         .map((row) => row as Map<String, dynamic>)

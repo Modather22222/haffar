@@ -1,4 +1,4 @@
-﻿import 'package:audioplayers/audioplayers.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class SoundManager {
   SoundManager._();
@@ -17,9 +17,11 @@ class SoundManager {
     }
   }
 
-  static Future<void> playCorrect([String id = 'default']) => _play('audio/correct.mp3');
+  static Future<void> playCorrect([String id = 'default']) =>
+      _play('audio/correct.mp3');
 
-  static Future<void> playWrong([String id = 'default']) => _play('audio/incorrect.mp3');
+  static Future<void> playWrong([String id = 'default']) =>
+      _play('audio/incorrect.mp3');
 
   static Future<void> dispose() => _player.dispose();
 }

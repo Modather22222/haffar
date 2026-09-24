@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
-import 'onboarding_ten_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingNineScreen extends StatelessWidget {
   const OnboardingNineScreen({super.key});
@@ -50,8 +51,10 @@ class OnboardingNineScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         const Expanded(
-                          child: HaffarSpeechBubble(tailPosition: BubbleTailPosition.bottomRight, 
-                            message: 'حفار يساعدك تبني طريق واضح نحو هدفك، وتعرف كل يوم وين وصلت وشنو باقي ليك.',
+                          child: HaffarSpeechBubble(
+                            tailPosition: BubbleTailPosition.bottomRight,
+                            message:
+                                'حفار يساعدك تبني طريق واضح نحو هدفك، وتعرف كل يوم وين وصلت وشنو باقي ليك.',
                           ),
                         ),
                       ],
@@ -89,13 +92,7 @@ class OnboardingNineScreen extends StatelessWidget {
                       child: HaffarPrimaryButton(
                         state: HaffarPrimaryButtonState.enabled,
                         label: 'استمر',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const OnboardingTenScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: () => context.push(Routes.onboardingTen),
                       ),
                     ),
                   ),
@@ -114,7 +111,11 @@ class _FeatureItem extends StatelessWidget {
   final Color iconBg;
   final String title;
 
-  const _FeatureItem({required this.icon, required this.iconBg, required this.title});
+  const _FeatureItem({
+    required this.icon,
+    required this.iconBg,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -125,11 +126,22 @@ class _FeatureItem extends StatelessWidget {
           Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Image.asset(icon, width: 28, height: 28),
           ),
           const SizedBox(width: 12),
-          Text(title, style: const TextStyle(fontFamily: 'DIN2014Rounded', fontSize: 15, fontWeight: FontWeight.w700, color: HaffarColors.grey1)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'DIN2014Rounded',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: HaffarColors.grey1,
+            ),
+          ),
         ],
       ),
     );

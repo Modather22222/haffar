@@ -1,4 +1,4 @@
-﻿/// Shared route constants — import anywhere you need navigation paths
+/// Shared route constants — import anywhere you need navigation paths
 abstract class Routes {
   Routes._();
   static const splash = '/';
@@ -17,6 +17,22 @@ abstract class Routes {
   static const profile = '/profile';
   static const settings = '/settings';
   static const signingIn = '/signing-in';
+  static const units = '/units';
+  static const lessonDetail = '/lesson-detail';
+  static const unitExercise = '/unit-exercise';
+  static const practiceQuiz = '/practice-quiz';
+  static const publicProfile = '/public-profile';
+  static const onboardingTwo = '/onboarding/two';
+  static const onboardingThree = '/onboarding/three';
+  static const onboardingFour = '/onboarding/four';
+  static const onboardingFive = '/onboarding/five';
+  static const onboardingSix = '/onboarding/six';
+  static const onboardingSeven = '/onboarding/seven';
+  static const onboardingEight = '/onboarding/eight';
+  static const onboardingNine = '/onboarding/nine';
+  static const onboardingTen = '/onboarding/ten';
+  static const onboardingEleven = '/onboarding/eleven';
+  static const signIn = '/sign-in';
 }
 
 /// Typed arguments for the /question route
@@ -25,7 +41,11 @@ class QuestionRouteArgs {
   final int lessonIndex;
   final int questionIndex;
 
-  const QuestionRouteArgs({required this.subjectId, required this.lessonIndex, required this.questionIndex});
+  const QuestionRouteArgs({
+    required this.subjectId,
+    required this.lessonIndex,
+    required this.questionIndex,
+  });
 }
 
 /// Typed arguments for the /feedback route
@@ -34,5 +54,9 @@ class FeedbackRouteArgs {
   final String? correctAnswer;
   final QuestionRouteArgs? questionArgs;
 
-  const FeedbackRouteArgs({required this.correct, this.correctAnswer, this.questionArgs});
+  const FeedbackRouteArgs({
+    required this.correct,
+    this.correctAnswer,
+    this.questionArgs,
+  });
 }

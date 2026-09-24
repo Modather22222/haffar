@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../design_system/colors.dart';
-import '../providers/app_provider.dart';
+import '../providers/content_provider.dart';
+import '../providers/economy_provider.dart';
 import '../models/question.dart';
 import '../utils/routes.dart';
 import '../widgets/question_widgets/question_widget_factory.dart';
@@ -16,7 +17,8 @@ class QuestionScreen extends StatefulWidget {
   State<QuestionScreen> createState() => _QuestionScreenState();
 }
 
-class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStateMixin {
+class _QuestionScreenState extends State<QuestionScreen>
+    with TickerProviderStateMixin {
   late String _subjectId;
   late String _subjectName;
   late int _lessonIndex;
@@ -32,7 +34,10 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
   }
 
   @override
@@ -44,16 +49,24 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final provider = context.read<AppProvider>();
+    final content = context.read<ContentProvider>();
     final uri = GoRouterState.of(context).uri;
     _subjectId = uri.queryParameters['subject'] ?? 'science';
-    _subjectName = provider.subjectById(_subjectId)?.name ?? _subjectId;
+    _subjectName = content.subjectById(_subjectId)?.name ?? _subjectId;
     _lessonIndex = int.tryParse(uri.queryParameters['lesson'] ?? '0') ?? 0;
     _questionIndex = int.tryParse(uri.queryParameters['q'] ?? '0') ?? 0;
-    _questions = provider.getQuestions(_subjectId, _lessonIndex);
+    _questions = content.getQuestions(_subjectId, _lessonIndex);
     _question = _questions.isNotEmpty
-        ? (_questionIndex < _questions.length ? _questions[_questionIndex] : _questions.first)
-        : const Question(id: '', subjectId: '', lessonIndex: 0, type: QuestionType.multipleChoice, text: '');
+        ? (_questionIndex < _questions.length
+              ? _questions[_questionIndex]
+              : _questions.first)
+        : const Question(
+            id: '',
+            subjectId: '',
+            lessonIndex: 0,
+            type: QuestionType.multipleChoice,
+            text: '',
+          );
   }
 
   void _submitAnswer(bool correct, String? correctAnswerText) {
@@ -66,7 +79,7 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
     _animController.forward();
     if (correct) {
       SoundManager.playCorrect(_question.id);
-      context.read<AppProvider>().addXp(3);
+      context.read<EconomyProvider>().addXp(3);
     } else {
       SoundManager.playWrong(_question.id);
     }
@@ -81,14 +94,21 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
         _showSparkles = false;
         _correctAnswerText = null;
       });
-      context.pushReplacement('${Routes.question}?subject=$_subjectId&lesson=$_lessonIndex&q=$_questionIndex');
+      context.pushReplacement(
+        '${Routes.question}?subject=$_subjectId&lesson=$_lessonIndex&q=$_questionIndex',
+      );
     } else {
-      context.pushReplacement(Routes.lessonPath, extra: {'subjectId': _subjectId});
+      context.pushReplacement(
+        Routes.lessonPath,
+        extra: {'subjectId': _subjectId},
+      );
     }
   }
 
   void _skip() {
-    context.pushReplacement('${Routes.question}?subject=$_subjectId&lesson=$_lessonIndex&q=${_questionIndex + 1}');
+    context.pushReplacement(
+      '${Routes.question}?subject=$_subjectId&lesson=$_lessonIndex&q=${_questionIndex + 1}',
+    );
   }
 
   void _back() {
@@ -98,7 +118,7 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFfbf9f9),
+      backgroundColor: HaffarColors.bgPage,
       body: Stack(
         children: [
           Column(
@@ -106,7 +126,9 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
               Expanded(
                 child: SafeArea(
                   child: SingleChildScrollView(
-                    physics: _answered ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
+                    physics: _answered
+                        ? const NeverScrollableScrollPhysics()
+                        : const BouncingScrollPhysics(),
                     padding: const EdgeInsets.only(bottom: 32),
                     child: QuestionWidgetFactory.create(
                       question: _question,
@@ -131,7 +153,10 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
               ),
             ],
           ),
-          if (_showSparkles) const Positioned.fill(child: IgnorePointer(child: SparkleBurstOverlay())),
+          if (_showSparkles)
+            const Positioned.fill(
+              child: IgnorePointer(child: SparkleBurstOverlay()),
+            ),
         ],
       ),
     );
@@ -141,42 +166,81 @@ class _QuestionScreenState extends State<QuestionScreen> with TickerProviderStat
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       color: _isCorrect ? HaffarColors.primary : HaffarColors.error,
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-          child: Center(child: Icon(
-            _isCorrect ? Icons.check_rounded : Icons.close_rounded,
-            size: 24,
-            color: _isCorrect ? HaffarColors.primary : HaffarColors.error,
-          )),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            _isCorrect ? 'أحسنت! إجابة صحيحة' : 'إجابة خاطئة',
-            style: const TextStyle(fontFamily: 'BeVietnamPro', fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
-          ),
-          if (!_isCorrect && _correctAnswerText != null) ...[
-            const SizedBox(height: 2),
-            Text('الإجابة الصحيحة: ${_correctAnswerText!}', style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 13, color: Colors.white70)),
-          ],
-        ])),
-        const SizedBox(width: 8),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _nextQuestion,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.all(Radius.circular(8))),
-              child: const Text('التالي', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 15, fontWeight: FontWeight.w700, color: HaffarColors.primary)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Icon(
+                _isCorrect ? Icons.check_rounded : Icons.close_rounded,
+                size: 24,
+                color: _isCorrect ? HaffarColors.primary : HaffarColors.error,
+              ),
             ),
           ),
-        ),
-      ]),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isCorrect ? 'أحسنت! إجابة صحيحة' : 'إجابة خاطئة',
+                  style: const TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                if (!_isCorrect && _correctAnswerText != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'الإجابة الصحيحة: ${_correctAnswerText!}',
+                    style: const TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _nextQuestion,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+                child: const Text(
+                  'التالي',
+                  style: TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: HaffarColors.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

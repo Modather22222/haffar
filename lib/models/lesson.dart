@@ -1,4 +1,4 @@
-﻿/// A lesson within a subject — loaded from Supabase `lessons` table.
+/// A lesson within a subject — loaded from Supabase `lessons` table.
 class Lesson {
   final String id;
   final String subjectId;
@@ -19,12 +19,12 @@ class Lesson {
   });
 
   factory Lesson.fromMap(Map<String, dynamic> map) => Lesson(
-        id: map['id'] as String,
-        subjectId: map['subject_id'] as String,
-        unitIndex: (map['unit_index'] as int?) ?? 0,
-        index: (map['lesson_index'] as int?) ?? 0,
-        title: map['title'] as String,
-        summary: (map['summary'] as String?) ?? '',
-        keyPoints: ((map['key_points'] as List?) ?? const []).cast<String>(),
-      );
+    id: map['id'] as String,
+    subjectId: map['subject_id'] as String,
+    unitIndex: (map['unit_index'] as int?) ?? 0,
+    index: (map['lesson_index'] as int?) ?? 0,
+    title: map['title'] as String,
+    summary: (map['summary'] as String?) ?? '',
+    keyPoints: ((map['key_points'] as List?) ?? const []).cast<String>(),
+  );
 }

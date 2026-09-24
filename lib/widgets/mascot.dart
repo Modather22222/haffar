@@ -1,20 +1,20 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// The app mascot — an energetic owl character with a pose for every moment.
 enum MascotPose {
-  cheer,      // (1) cheering with heart fan — quiz/lesson complete
+  cheer, // (1) cheering with heart fan — quiz/lesson complete
   starstruck, // (2) starry-eyed amazed — correct answers, achievements
   panicSkate, // (3) panicking on roller skates — wrong answer (funny)
   determined, // (4) skating hard — streak push / hard mode
-  sleepy,     // (5) sleepy — idle / come-back nudge
-  panicRun,   // (6) running panicked — wrong answer / time pressure
-  jump,       // (7) jumping excited — correct answer
-  celebrate,  // (8) confetti surprise — unit exercise / level-up
-  shyWave,    // (9) shy wave — onboarding
-  wave,       // (10) excited wave — welcome / lesson start
-  sad,        // (11) crying sad — wrong answer empathy
-  study,      // (12) taking notes — summary / study content
-  love,       // (13) in love — favorites / rewards
+  sleepy, // (5) sleepy — idle / come-back nudge
+  panicRun, // (6) running panicked — wrong answer / time pressure
+  jump, // (7) jumping excited — correct answer
+  celebrate, // (8) confetti surprise — unit exercise / level-up
+  shyWave, // (9) shy wave — onboarding
+  wave, // (10) excited wave — welcome / lesson start
+  sad, // (11) crying sad — wrong answer empathy
+  study, // (12) taking notes — summary / study content
+  love, // (13) in love — favorites / rewards
 }
 
 class Mascot extends StatelessWidget {

@@ -1,4 +1,4 @@
-﻿import '../../design_system/colors.dart';
+import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
 import 'question_base.dart';
 
@@ -51,28 +51,100 @@ class _DefinitionQuestionState extends State<DefinitionQuestion> {
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,
-      buildBody: (_) => Column(children: [
-        Container(width: double.infinity, padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: HaffarColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16), border: Border.all(color: HaffarColors.primary.withValues(alpha: 0.3), width: 2)),
-          child: Text(widget.term, style: const TextStyle(fontFamily: 'BeVietnamPro', fontSize: 28, fontWeight: FontWeight.w800, color: HaffarColors.primaryDark), textAlign: TextAlign.center),
-        ),
-        const SizedBox(height: 20),
-        ...widget.options.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final text = entry.value;
-          return Padding(padding: const EdgeInsets.only(bottom: 10), child: _DefOption(text: text, isSelected: _selected == idx && !widget.locked, isCorrect: widget.locked && idx == widget.correctIndex, isWrong: widget.locked && _selected == idx && idx != widget.correctIndex, onTap: widget.locked ? null : () => setState(() => _selected = idx)));
-        }),
-        const SizedBox(height: 12),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Column(children: [
-          SizedBox(height: 52, child: ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _selected != null ? HaffarColors.primary : HaffarColors.surfaceHigh, foregroundColor: _selected != null ? Colors.white : HaffarColors.textSecondary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-            onPressed: _selected != null && !widget.locked ? _submit : null,
-            child: const Text('تحقق', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 18, fontWeight: FontWeight.w700)),
-          )),
-          const SizedBox(height: 8),
-          TextButton(onPressed: widget.locked ? null : widget.onSkip, child: const Text('تخطي', style: TextStyle(fontFamily: 'BeVietnamPro', fontSize: 14, fontWeight: FontWeight.w500, color: HaffarColors.outline))),
-        ])),
-      ]),
+      buildBody: (_) => Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: HaffarColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: HaffarColors.primary.withValues(alpha: 0.3),
+                width: 2,
+              ),
+            ),
+            child: Text(
+              widget.term,
+              style: const TextStyle(
+                fontFamily: 'BeVietnamPro',
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: HaffarColors.primaryDark,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ...widget.options.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final text = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _DefOption(
+                text: text,
+                isSelected: _selected == idx && !widget.locked,
+                isCorrect: widget.locked && idx == widget.correctIndex,
+                isWrong:
+                    widget.locked &&
+                    _selected == idx &&
+                    idx != widget.correctIndex,
+                onTap: widget.locked
+                    ? null
+                    : () => setState(() => _selected = idx),
+              ),
+            );
+          }),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _selected != null
+                          ? HaffarColors.primary
+                          : HaffarColors.surfaceHigh,
+                      foregroundColor: _selected != null
+                          ? Colors.white
+                          : HaffarColors.textSecondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: _selected != null && !widget.locked
+                        ? _submit
+                        : null,
+                    child: const Text(
+                      'تحقق',
+                      style: TextStyle(
+                        fontFamily: 'BeVietnamPro',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: widget.locked ? null : widget.onSkip,
+                  child: const Text(
+                    'تخطي',
+                    style: TextStyle(
+                      fontFamily: 'BeVietnamPro',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: HaffarColors.outline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -83,7 +155,13 @@ class _DefOption extends StatelessWidget {
   final bool isCorrect;
   final bool isWrong;
   final VoidCallback? onTap;
-  const _DefOption({required this.text, required this.isSelected, required this.isCorrect, required this.isWrong, this.onTap});
+  const _DefOption({
+    required this.text,
+    required this.isSelected,
+    required this.isCorrect,
+    required this.isWrong,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -102,17 +180,66 @@ class _DefOption extends StatelessWidget {
       bgColor = Colors.white;
       borderColor = HaffarColors.outline.withValues(alpha: 0.25);
     }
-    return Material(color: Colors.transparent, child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(duration: const Duration(milliseconds: 150), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderColor),
-          boxShadow: !isSelected && !isCorrect && !isWrong ? [BoxShadow(color: HaffarColors.outline.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 2))] : []),
-        child: Row(children: [
-          Container(width: 22, height: 22, decoration: BoxDecoration(color: isCorrect || isSelected ? HaffarColors.primary : isWrong ? HaffarColors.error : HaffarColors.outline.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(6)),
-            child: isWrong ? const Icon(Icons.close, size: 14, color: Colors.white) : (isCorrect || isSelected ? const Icon(Icons.check, size: 14, color: Colors.white) : null)),
-          const SizedBox(width: 14),
-          Expanded(child: Text(text, style: const TextStyle(fontFamily: 'PlusJakartaSans', fontSize: 16, fontWeight: FontWeight.w500))),
-        ]),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+            boxShadow: !isSelected && !isCorrect && !isWrong
+                ? [
+                    BoxShadow(
+                      color: HaffarColors.outline.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: isCorrect || isSelected
+                      ? HaffarColors.primary
+                      : isWrong
+                      ? HaffarColors.error
+                      : HaffarColors.outline.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: isWrong
+                    ? const Icon(Icons.close, size: 14, color: Colors.white)
+                    : (isCorrect || isSelected
+                          ? const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            )
+                          : null),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    fontFamily: 'PlusJakartaSans',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-    ));
+    );
   }
 }

@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
-import 'onboarding_six_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingFiveScreen extends StatefulWidget {
   const OnboardingFiveScreen({super.key});
@@ -52,14 +53,14 @@ class _OnboardingFiveScreenState extends State<OnboardingFiveScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                   child: Row(
                     children: [
-                       GestureDetector(
-                         onTap: () => Navigator.of(context).pop(),
-                         child: const Icon(
-                           Icons.arrow_back_rounded,
-                           color: HaffarColors.grey2,
-                           size: 24,
-                         ),
-                       ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       const Expanded(child: HaffarProgressBar(progress: 0.3)),
                     ],
@@ -77,7 +78,10 @@ class _OnboardingFiveScreenState extends State<OnboardingFiveScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Expanded(
-                        child: HaffarSpeechBubble(tailPosition: BubbleTailPosition.bottomRight, message: 'ممتحن من وين؟'),
+                        child: HaffarSpeechBubble(
+                          tailPosition: BubbleTailPosition.bottomRight,
+                          message: 'ممتحن من وين؟',
+                        ),
                       ),
                     ],
                   ),
@@ -160,13 +164,7 @@ class _OnboardingFiveScreenState extends State<OnboardingFiveScreen> {
                           : HaffarPrimaryButtonState.disabled,
                       label: 'استمر',
                       onPressed: _selectedState != null
-                          ? () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const OnboardingSixScreen(),
-                                ),
-                              );
-                            }
+                          ? () => context.push(Routes.onboardingSix)
                           : null,
                     ),
                   ),

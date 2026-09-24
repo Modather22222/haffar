@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -7,8 +8,8 @@ import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
-import '../providers/app_provider.dart';
-import 'onboarding_eight_screen.dart';
+import '../providers/progress_provider.dart';
+import '../utils/routes.dart';
 
 class OnboardingSevenScreen extends StatefulWidget {
   const OnboardingSevenScreen({super.key});
@@ -40,10 +41,10 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
           ),
         );
       } else if (mounted) {
-        context.read<AppProvider>().enableNotifications();
+        context.read<ProgressProvider>().enableNotifications();
       }
     } else {
-      context.read<AppProvider>().enableNotifications();
+      context.read<ProgressProvider>().enableNotifications();
     }
   }
 
@@ -51,7 +52,7 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
   void initState() {
     super.initState();
     _controller.addListener(_updateState);
-    _notifications = context.read<AppProvider>().notificationsEnabled;
+    _notifications = context.read<ProgressProvider>().notificationsEnabled;
   }
 
   @override
@@ -75,14 +76,14 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                   child: Row(
                     children: [
-                       GestureDetector(
-                         onTap: () => Navigator.of(context).pop(),
-                         child: const Icon(
-                           Icons.arrow_back_rounded,
-                           color: HaffarColors.grey2,
-                           size: 24,
-                         ),
-                       ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       const Expanded(child: HaffarProgressBar(progress: 0.4)),
                     ],
@@ -100,7 +101,8 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Expanded(
-                        child: HaffarSpeechBubble(tailPosition: BubbleTailPosition.bottomRight, 
+                        child: HaffarSpeechBubble(
+                          tailPosition: BubbleTailPosition.bottomRight,
                           message: 'عايز تجيب كم في امتحان الشهادة؟',
                         ),
                       ),
@@ -112,7 +114,9 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: TextField(
                     controller: _controller,
-                    keyboardType: const TextInputType.numberWithOptions(signed: false),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      signed: false,
+                    ),
                     inputFormatters: [_ArabicDigitsFormatter()],
                     textAlign: TextAlign.center,
                     style: const TextStyle(
@@ -134,9 +138,15 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: HaffarColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: HaffarColors.primary,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -147,7 +157,10 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                     onTap: () => _toggleNotifications(!_notifications),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: HaffarColors.grey6,
                         borderRadius: BorderRadius.circular(12),
@@ -156,7 +169,9 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                         children: [
                           Icon(
                             Icons.notifications_outlined,
-                            color: _notifications ? HaffarColors.primary : HaffarColors.grey3,
+                            color: _notifications
+                                ? HaffarColors.primary
+                                : HaffarColors.grey3,
                             size: 24,
                           ),
                           const SizedBox(width: 12),
@@ -199,18 +214,16 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                               if (n == null || n < 140) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: const Text('يجب ان يكون الرقم اكبر من 140'),
+                                    content: const Text(
+                                      'يجب ان يكون الرقم اكبر من 140',
+                                    ),
                                     backgroundColor: HaffarColors.error,
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
                                 return;
                               }
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const OnboardingEightScreen(),
-                                ),
-                              );
+                              context.push(Routes.onboardingEight);
                             }
                           : null,
                     ),
@@ -228,7 +241,10 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
 /// Accepts both ASCII digits (0-9) and Arabic-Indic digits (٠-٩)
 class _ArabicDigitsFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final cleaned = newValue.text.replaceAll(
       RegExp(r'[^\u0030-\u0039\u0660-\u0669]'),
       '',

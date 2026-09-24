@@ -37,12 +37,14 @@ android {
     signingConfigs {
         create("release") {
             val ks = keystoreFile
-            if (ks != null) {
-                storeFile = ks
-                storePassword = ksStorePassword
-                keyAlias = ksKeyAlias
-                keyPassword = ksKeyPassword
-            }
+                ?: throw GradleException(
+                    "Release signing requires a keystore. Set key.store in " +
+                    "gradle.properties or KEYSTORE_PATH (CI)."
+                )
+            storeFile = ks
+            storePassword = ksStorePassword
+            keyAlias = ksKeyAlias
+            keyPassword = ksKeyPassword
         }
     }
 
@@ -56,12 +58,14 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystoreFile != null) {
-                signingConfigs.getByName("release")
-            } else {
-                logger.warn("No keystore file found — signing release build with debug keys.")
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
+            // R8 shrink + obfuscate for smaller, harder-to-reverse APKs.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
         debug {
             signingConfig = signingConfigs.getByName("debug")

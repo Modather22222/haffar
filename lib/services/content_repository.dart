@@ -1,4 +1,4 @@
-﻿import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/lesson.dart';
 import '../models/question.dart';
 import '../models/subject.dart';
@@ -11,7 +11,10 @@ class ContentRepository {
   ContentRepository(this._client);
 
   Future<List<Subject>> fetchSubjects() async {
-    final subjectRows = await _client.from('subjects').select().order('sort_order');
+    final subjectRows = await _client
+        .from('subjects')
+        .select()
+        .order('sort_order');
     final unitRows = await _client.from('units').select().order('unit_index');
     final unitsBySubject = <String, List<Unit>>{};
     for (final row in unitRows) {
@@ -19,7 +22,10 @@ class ContentRepository {
       unitsBySubject.putIfAbsent(unit.subjectId, () => []).add(unit);
     }
     return subjectRows.map((row) {
-      final subject = Subject.fromMap(row, units: unitsBySubject[row['id']] ?? const []);
+      final subject = Subject.fromMap(
+        row,
+        units: unitsBySubject[row['id']] ?? const [],
+      );
       return subject;
     }).toList();
   }

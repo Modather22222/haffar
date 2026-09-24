@@ -87,7 +87,7 @@ Energetic, encouraging, and playful — designed specifically for the RTL (Arabi
 | Screen | ID |
 |--------|-----|
 | شاشة البداية (Splash Screen) | `0a0036f2` |
-| مرحباًُ بك في haffar (Welcome) | `0b0fba06` |
+| مرحبا بك في haffar (Welcome) | `0b0fba06` |
 | إنشاء حساب جديد (Sign Up) | `27ccc07e` |
 | تسجيل الدخول (Login) | `498a3dd0` |
 | تفعيل التنبيهات (Enable Notifications) | `cf6700be` |

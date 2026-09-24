@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
-import 'onboarding_seven_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingSixScreen extends StatefulWidget {
   const OnboardingSixScreen({super.key});
@@ -17,15 +18,15 @@ class _OnboardingSixScreenState extends State<OnboardingSixScreen> {
   String? _selectedSource;
 
   static const _sources = [
-    {'label': 'تيك توك',   'icon': 'assets/apps/tiktok.png'},
-    {'label': 'فيسبوك',   'icon': 'assets/apps/facebook.png'},
+    {'label': 'تيك توك', 'icon': 'assets/apps/tiktok.png'},
+    {'label': 'فيسبوك', 'icon': 'assets/apps/facebook.png'},
     {'label': 'انستجرام', 'icon': 'assets/apps/instagram.png'},
-    {'label': 'يوتيوب',  'icon': 'assets/apps/youtube.png'},
-    {'label': 'متجر بلاي','icon': 'assets/apps/google-play.png'},
-    {'label': 'واتساب',   'icon': 'assets/apps/whatsapp.png'},
-    {'label': 'تلجرام',   'icon': 'assets/apps/telegram.png'},
-    {'label': 'صديق/زميل','icon': 'assets/apps/people.png'},
-    {'label': 'أخرى',     'icon': 'assets/apps/other.png'},
+    {'label': 'يوتيوب', 'icon': 'assets/apps/youtube.png'},
+    {'label': 'متجر بلاي', 'icon': 'assets/apps/google-play.png'},
+    {'label': 'واتساب', 'icon': 'assets/apps/whatsapp.png'},
+    {'label': 'تلجرام', 'icon': 'assets/apps/telegram.png'},
+    {'label': 'صديق/زميل', 'icon': 'assets/apps/people.png'},
+    {'label': 'أخرى', 'icon': 'assets/apps/other.png'},
   ];
 
   @override
@@ -42,14 +43,14 @@ class _OnboardingSixScreenState extends State<OnboardingSixScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                   child: Row(
                     children: [
-                       GestureDetector(
-                         onTap: () => Navigator.of(context).pop(),
-                         child: const Icon(
-                           Icons.arrow_back_rounded,
-                           color: HaffarColors.grey2,
-                           size: 24,
-                         ),
-                       ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       const Expanded(child: HaffarProgressBar(progress: 0.35)),
                     ],
@@ -67,7 +68,8 @@ class _OnboardingSixScreenState extends State<OnboardingSixScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Expanded(
-                        child: HaffarSpeechBubble(tailPosition: BubbleTailPosition.bottomRight, 
+                        child: HaffarSpeechBubble(
+                          tailPosition: BubbleTailPosition.bottomRight,
                           message: 'كيف سمعت عن حفار؟',
                         ),
                       ),
@@ -88,7 +90,9 @@ class _OnboardingSixScreenState extends State<OnboardingSixScreen> {
                           label: source['label'] as String,
                           iconPath: source['icon'] as String,
                           selected: selected,
-                          onTap: () => setState(() => _selectedSource = source['label'] as String),
+                          onTap: () => setState(
+                            () => _selectedSource = source['label'] as String,
+                          ),
                         ),
                       );
                     },
@@ -105,13 +109,7 @@ class _OnboardingSixScreenState extends State<OnboardingSixScreen> {
                       label: 'استمر',
                       onPressed: _selectedSource == null
                           ? null
-                          : () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const OnboardingSevenScreen(),
-                                ),
-                              );
-                            },
+                          : () => context.push(Routes.onboardingSeven),
                     ),
                   ),
                 ),
@@ -130,7 +128,12 @@ class _SourceRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _SourceRow({required this.label, required this.iconPath, required this.selected, required this.onTap});
+  const _SourceRow({
+    required this.label,
+    required this.iconPath,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +144,10 @@ class _SourceRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? HaffarColors.primary : HaffarColors.grey5, width: 2),
+          border: Border.all(
+            color: selected ? HaffarColors.primary : HaffarColors.grey5,
+            width: 2,
+          ),
         ),
         child: Row(
           children: [

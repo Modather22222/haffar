@@ -1,12 +1,13 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../design_system/colors.dart';
 import '../design_system/tokens/text_styles.dart';
-import '../providers/app_provider.dart';
+import '../providers/content_provider.dart';
+import '../providers/progress_provider.dart';
+import '../providers/session_provider.dart';
 import '../utils/app_logger.dart';
 import '../utils/routes.dart';
-import 'onboarding_one_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,38 +48,33 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _navigate() async {
     AppLog.info('splash _navigate start');
-    final p = context.read<AppProvider>();
-    await p.loadContent();
-    AppLog.info('loadContent done status=${p.contentStatus} '
-        'subjects=${p.subjects.length} questions=${p.totalQuestionCount()}');
-    if (p.contentStatus == ContentStatus.error) {
+    final content = context.read<ContentProvider>();
+    final session = context.read<SessionProvider>();
+    final progress = context.read<ProgressProvider>();
+    await content.loadContent();
+    AppLog.info(
+      'loadContent done status=${content.status} '
+      'subjects=${content.subjects.length} questions=${content.totalQuestionCount()}',
+    );
+    if (content.status == ContentStatus.error) {
       AppLog.warn('content error, retrying once');
       await Future.delayed(const Duration(milliseconds: 800));
-      await p.loadContent();
-      AppLog.info('loadContent retry status=${p.contentStatus}');
+      await content.loadContent();
+      AppLog.info('loadContent retry status=${content.status}');
     }
-    await p.initUserData();
-    AppLog.info('initUserData done sync=${p.remoteSyncEnabled} '
-        'loggedIn=${p.hasLoggedIn} onboarded=${p.hasCompletedOnboarding} '
-        'subject=${p.selectedSubjectId}');
+    await session.initUserData();
+    AppLog.info(
+      'initUserData done sync=${session.remoteSyncEnabled} '
+      'loggedIn=${progress.hasLoggedIn} onboarded=${progress.hasCompletedOnboarding} '
+      'subject=${progress.selectedSubjectId}',
+    );
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    final provider = context.read<AppProvider>();
-    if (!provider.hasLoggedIn) {
-      AppLog.info('route -> onboarding (not logged in)');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingOneScreen()),
-      );
-    } else if (!provider.hasCompletedOnboarding) {
-      AppLog.info('route -> onboarding (not completed)');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingOneScreen()),
-      );
-    } else if (provider.selectedSubjectId == null) {
-      AppLog.info('route -> onboarding (no subject)');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingOneScreen()),
-      );
+    if (!progress.hasLoggedIn ||
+        !progress.hasCompletedOnboarding ||
+        progress.selectedSubjectId == null) {
+      AppLog.info('route -> onboarding');
+      context.go(Routes.welcome);
     } else {
       AppLog.info('route -> home');
       context.go(Routes.home);

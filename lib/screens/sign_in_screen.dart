@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../design_system/colors.dart';
@@ -37,9 +37,21 @@ class _SignInScreenState extends State<SignInScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 48),
-                  Image.asset('assets/character/character (10).png', width: 120, height: 150),
+                  Image.asset(
+                    'assets/character/character (10).png',
+                    width: 120,
+                    height: 150,
+                  ),
                   const SizedBox(height: 24),
-                   Text('تسجيل الدخول', style: TextStyle(fontFamily: 'DIN2014Rounded', fontSize: 28, fontWeight: FontWeight.w700, color: HaffarColors.grey1)),
+                  Text(
+                    'تسجيل الدخول',
+                    style: TextStyle(
+                      fontFamily: 'DIN2014Rounded',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: HaffarColors.grey1,
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   TextField(
                     controller: _emailController,
@@ -47,11 +59,20 @@ class _SignInScreenState extends State<SignInScreen> {
                     textDirection: TextDirection.ltr,
                     decoration: InputDecoration(
                       hintText: 'Email',
-                      hintStyle: TextStyle(fontFamily: 'DIN2014Rounded', color: HaffarColors.grey3),
+                      hintStyle: TextStyle(
+                        fontFamily: 'DIN2014Rounded',
+                        color: HaffarColors.grey3,
+                      ),
                       filled: true,
                       fillColor: HaffarColors.grey6,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -61,14 +82,30 @@ class _SignInScreenState extends State<SignInScreen> {
                     textDirection: TextDirection.ltr,
                     decoration: InputDecoration(
                       hintText: 'Password',
-                      hintStyle: TextStyle(fontFamily: 'DIN2014Rounded', color: HaffarColors.grey3),
+                      hintStyle: TextStyle(
+                        fontFamily: 'DIN2014Rounded',
+                        color: HaffarColors.grey3,
+                      ),
                       filled: true,
                       fillColor: HaffarColors.grey6,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       suffixIcon: IconButton(
-                         icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: HaffarColors.grey3),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: HaffarColors.grey3,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
                   ),
@@ -77,7 +114,15 @@ class _SignInScreenState extends State<SignInScreen> {
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () {},
-                      child: Text('نسيت كلمة المرور؟', style: TextStyle(fontFamily: 'DIN2014Rounded', fontSize: 14, fontWeight: FontWeight.w600, color: HaffarColors.primary)),
+                      child: Text(
+                        'نسيت كلمة المرور؟',
+                        style: TextStyle(
+                          fontFamily: 'DIN2014Rounded',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: HaffarColors.primary,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -94,7 +139,15 @@ class _SignInScreenState extends State<SignInScreen> {
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () => context.pop(),
-                     child: Text('العودة', style: TextStyle(fontFamily: 'DIN2014Rounded', fontSize: 16, fontWeight: FontWeight.w600, color: HaffarColors.grey3)),
+                    child: Text(
+                      'العودة',
+                      style: TextStyle(
+                        fontFamily: 'DIN2014Rounded',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: HaffarColors.grey3,
+                      ),
+                    ),
                   ),
                 ],
               ),

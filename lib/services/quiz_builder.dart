@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 
 import '../models/question.dart';
 
@@ -22,21 +22,30 @@ class QuizBuilder {
   static final _lastAttemptIds = <String, Set<String>>{};
 
   /// Builds a quiz of [count] questions from [pool] for the attempt [key].
-  static List<Question> build(String key, List<Question> pool, {int count = 3, Random? random}) {
+  static List<Question> build(
+    String key,
+    List<Question> pool, {
+    int count = 3,
+    Random? random,
+  }) {
     final rnd = random ?? Random();
     final seen = _lastAttemptIds[key] ?? const <String>{};
     final fresh = pool.where((q) => !seen.contains(q.id)).toList();
     // Only exclude seen questions when enough unseen ones remain.
     final candidates = fresh.length >= count ? fresh : List<Question>.of(pool);
     candidates.shuffle(rnd);
-    final selected = candidates.take(count.clamp(1, candidates.length)).map((q) => _shuffleOptions(q, rnd)).toList();
+    final selected = candidates
+        .take(count.clamp(1, candidates.length))
+        .map((q) => _shuffleOptions(q, rnd))
+        .toList();
     _lastAttemptIds[key] = selected.map((q) => q.id).toSet();
     return selected;
   }
 
   static Question _shuffleOptions(Question q, Random rnd) {
     if (!_shufflableTypes.contains(q.type) || q.options.length < 2) return q;
-    final indices = List<int>.generate(q.options.length, (i) => i)..shuffle(rnd);
+    final indices = List<int>.generate(q.options.length, (i) => i)
+      ..shuffle(rnd);
     final remapped = indices.indexOf(q.correctIndex);
     return Question(
       id: q.id,

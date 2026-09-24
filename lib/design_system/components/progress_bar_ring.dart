@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 import '../colors.dart';
@@ -44,7 +44,10 @@ class HaffarProgressBar extends StatelessWidget {
         ),
         if (withText) ...[
           const SizedBox(height: HaffarMetrics.space4),
-          Text('$pct%', style: HaffarTextStyles.smallBold.copyWith(color: color)),
+          Text(
+            '$pct%',
+            style: HaffarTextStyles.smallBold.copyWith(color: color),
+          ),
         ],
       ],
     );

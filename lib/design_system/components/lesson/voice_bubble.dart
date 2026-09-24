@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../tokens/tokens.dart';
 import '../../colors.dart';
@@ -24,11 +24,12 @@ class HaffarVoice extends StatelessWidget {
       children: [
         HaffarSpeechBubble(message: message),
         const SizedBox(height: 8),
-        mascot ?? Image.asset(
-          'assets/character/character (7).png',
-          width: mascotSize,
-          height: mascotSize,
-        ),
+        mascot ??
+            Image.asset(
+              'assets/character/character (7).png',
+              width: mascotSize,
+              height: mascotSize,
+            ),
       ],
     );
   }
@@ -62,7 +63,8 @@ class HaffarSpeechBubble extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border, width: 2),
         ),
-        child: child ??
+        child:
+            child ??
             Text(
               message!,
               style: TextStyle(
@@ -107,22 +109,45 @@ class _BubbleTailPainter extends CustomPainter {
 
     switch (position) {
       case BubbleTailPosition.center:
-        _drawBottomTail(canvas, size, x: size.width / 2, tailW: tailW, tailH: tailH);
+        _drawBottomTail(
+          canvas,
+          size,
+          x: size.width / 2,
+          tailW: tailW,
+          tailH: tailH,
+        );
         break;
       case BubbleTailPosition.left:
         _drawBottomTail(canvas, size, x: tailW + 4, tailW: tailW, tailH: tailH);
         break;
       case BubbleTailPosition.right:
-        _drawBottomTail(canvas, size, x: size.width - tailW - 4, tailW: tailW, tailH: tailH);
+        _drawBottomTail(
+          canvas,
+          size,
+          x: size.width - tailW - 4,
+          tailW: tailW,
+          tailH: tailH,
+        );
         break;
       case BubbleTailPosition.bottomRight:
-        _drawRightTail(canvas, size, y: size.height - tailW / 2 - 4, tailW: tailW, tailH: tailH);
+        _drawRightTail(
+          canvas,
+          size,
+          y: size.height - tailW / 2 - 4,
+          tailW: tailW,
+          tailH: tailH,
+        );
         break;
     }
   }
 
-  void _drawBottomTail(Canvas canvas, Size size,
-      {required double x, required double tailW, required double tailH}) {
+  void _drawBottomTail(
+    Canvas canvas,
+    Size size, {
+    required double x,
+    required double tailW,
+    required double tailH,
+  }) {
     final bottomY = size.height;
     final fillPath = Path()
       ..moveTo(x - tailW / 2, bottomY - 1)
@@ -134,11 +159,22 @@ class _BubbleTailPainter extends CustomPainter {
       ..lineTo(x, bottomY + tailH)
       ..lineTo(x + tailW / 2, bottomY - 2);
     canvas.drawPath(fillPath, Paint()..color = Colors.white);
-    canvas.drawPath(borderPath, Paint()..color = border..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawPath(
+      borderPath,
+      Paint()
+        ..color = border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 
-  void _drawRightTail(Canvas canvas, Size size,
-      {required double y, required double tailW, required double tailH}) {
+  void _drawRightTail(
+    Canvas canvas,
+    Size size, {
+    required double y,
+    required double tailW,
+    required double tailH,
+  }) {
     final rightX = size.width;
     final fillPath = Path()
       ..moveTo(rightX - 1, y - tailW / 2)
@@ -150,7 +186,13 @@ class _BubbleTailPainter extends CustomPainter {
       ..lineTo(rightX + tailH, y)
       ..lineTo(rightX - 2, y + tailW / 2);
     canvas.drawPath(fillPath, Paint()..color = Colors.white);
-    canvas.drawPath(borderPath, Paint()..color = border..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawPath(
+      borderPath,
+      Paint()
+        ..color = border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
   }
 
   @override

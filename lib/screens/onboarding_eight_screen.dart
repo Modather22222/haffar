@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
-import 'onboarding_nine_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingEightScreen extends StatefulWidget {
   const OnboardingEightScreen({super.key});
@@ -37,14 +38,14 @@ class _OnboardingEightScreenState extends State<OnboardingEightScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                   child: Row(
                     children: [
-                       GestureDetector(
-                         onTap: () => Navigator.of(context).pop(),
-                         child: const Icon(
-                           Icons.arrow_back_rounded,
-                           color: HaffarColors.grey2,
-                           size: 24,
-                         ),
-                       ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: HaffarColors.grey2,
+                          size: 24,
+                        ),
+                      ),
                       const SizedBox(width: 16),
                       const Expanded(child: HaffarProgressBar(progress: 0.5)),
                     ],
@@ -62,7 +63,8 @@ class _OnboardingEightScreenState extends State<OnboardingEightScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Expanded(
-                        child: HaffarSpeechBubble(tailPosition: BubbleTailPosition.bottomRight, 
+                        child: HaffarSpeechBubble(
+                          tailPosition: BubbleTailPosition.bottomRight,
                           message: 'اخر سؤال اسم مدرستك شنو؟',
                         ),
                       ),
@@ -97,9 +99,15 @@ class _OnboardingEightScreenState extends State<OnboardingEightScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: HaffarColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: HaffarColors.primary,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -114,13 +122,7 @@ class _OnboardingEightScreenState extends State<OnboardingEightScreen> {
                           : HaffarPrimaryButtonState.disabled,
                       label: 'استمر',
                       onPressed: _displayText.isNotEmpty
-                          ? () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const OnboardingNineScreen(),
-                                ),
-                              );
-                            }
+                          ? () => context.push(Routes.onboardingNine)
                           : null,
                     ),
                   ),

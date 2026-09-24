@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
-import 'onboarding_four_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingThreeScreen extends StatelessWidget {
   const OnboardingThreeScreen({super.key});
@@ -73,13 +74,7 @@ class OnboardingThreeScreen extends StatelessWidget {
                         width: double.infinity,
                         child: HaffarPrimaryButton(
                           label: 'استمر',
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const OnboardingFourScreen(),
-                              ),
-                            );
-                          },
+                          onPressed: () => context.push(Routes.onboardingFour),
                         ),
                       ),
                       const SizedBox(height: 32),

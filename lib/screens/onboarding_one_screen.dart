@@ -1,10 +1,10 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../design_system/colors.dart';
 import '../design_system/tokens/text_styles.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/buttons/button_general_secondary.dart';
-import 'onboarding_two_screen.dart';
-import 'sign_in_screen.dart';
+import '../utils/routes.dart';
 
 class OnboardingOneScreen extends StatelessWidget {
   const OnboardingOneScreen({super.key});
@@ -53,13 +53,7 @@ class OnboardingOneScreen extends StatelessWidget {
                     width: double.infinity,
                     child: HaffarPrimaryButton(
                       label: 'ابدأ الآن',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const OnboardingTwoScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: () => context.push(Routes.onboardingTwo),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -67,13 +61,7 @@ class OnboardingOneScreen extends StatelessWidget {
                     width: double.infinity,
                     child: HaffarSecondaryButton(
                       label: 'لدي حساب بالفعل',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SignInScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: () => context.push(Routes.signIn),
                     ),
                   ),
                   const SizedBox(height: 32),
