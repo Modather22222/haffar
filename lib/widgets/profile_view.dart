@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design_system/colors.dart';
+import '../services/banner_repository.dart';
 import 'xp_icon.dart';
 
 /// Shared profile header: achievement banner, overlapping avatar, name,
@@ -44,43 +45,50 @@ class ProfileView extends StatelessWidget {
     return Column(
       children: [
         // ── Banner + avatar ──────────────────────────────────────────────
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Image.asset(
-              bannerAsset,
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 116,
-              child: Center(
-                child: Container(
-                  width: 88,
-                  height: 88,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 4),
-                    color: HaffarColors.primary,
-                  ),
+        // Height follows the art's own ratio (≈2.70:1) so the whole banner
+        // shows — a fixed 160px + cover cropped the sides on phones.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final bannerH = constraints.maxWidth / BannerRepository.aspectRatio;
+            return Stack(
+              clipBehavior: Clip.none,
+              children: [
+                SizedBox(
+                  width: constraints.maxWidth,
+                  height: bannerH,
+                  child: Image.asset(bannerAsset, fit: BoxFit.cover),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  // Avatar still hangs 44px below the banner, as before.
+                  top: bannerH - 44,
                   child: Center(
-                    child: Text(
-                      _initial,
-                      style: const TextStyle(
-                        fontFamily: 'BeVietnamPro',
-                        fontSize: 36,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                        color: HaffarColors.primary,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _initial,
+                          style: const TextStyle(
+                            fontFamily: 'BeVietnamPro',
+                            fontSize: 36,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
         const SizedBox(height: 44),
 

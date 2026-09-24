@@ -2,18 +2,24 @@ import '../design_system/colors.dart';
 import '../widgets/profile_view.dart';
 import '../providers/economy_provider.dart';
 import '../providers/progress_provider.dart';
+import '../services/banner_repository.dart';
+import '../utils/app_logger.dart';
+import '../utils/app_toast.dart';
 import '../utils/routes.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Banner assets available per achievement tier.
 class _Banner {
+  final String key;
   final String asset;
   final String title;
   final String desc;
   final bool unlocked;
   const _Banner({
+    required this.key,
     required this.asset,
     required this.title,
     required this.desc,
@@ -61,8 +67,38 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _ProfileBody extends StatelessWidget {
+class _ProfileBody extends StatefulWidget {
   const _ProfileBody();
+
+  @override
+  State<_ProfileBody> createState() => _ProfileBodyState();
+}
+
+class _ProfileBodyState extends State<_ProfileBody> {
+  /// Server-computed unlock flags (get_my_banners RPC). Empty until the
+  /// fetch lands — and stays empty on failure — in which case the local
+  /// threshold fallback in _bannerGrid applies.
+  Map<String, bool> _bannerUnlocks = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerUnlocks();
+  }
+
+  Future<void> _loadBannerUnlocks() async {
+    try {
+      final unlocks = await BannerRepository(
+        Supabase.instance.client,
+      ).getUnlocks();
+      if (mounted && unlocks.isNotEmpty) {
+        setState(() => _bannerUnlocks = unlocks);
+      }
+    } catch (e, st) {
+      AppLog.warn('get_my_banners failed: $e');
+      AppLog.error('get_my_banners', e, st);
+    }
+  }
 
   /// Select banner asset based on user progress thresholds.
   String _selectedBannerAsset(int streak, int lessons) {
@@ -88,10 +124,9 @@ class _ProfileBody extends StatelessWidget {
         xp: economy.xp,
         streak: economy.streak,
         completedLessons: progress.completedLessons,
-        bannerAsset: _selectedBannerAsset(
-          economy.streak,
-          progress.completedLessons,
-        ),
+        bannerAsset:
+            BannerRepository.assets[economy.selectedBanner] ??
+            _selectedBannerAsset(economy.streak, progress.completedLessons),
         trailing: (ctx) => _achievementsSection(ctx),
       ),
     );
@@ -99,7 +134,7 @@ class _ProfileBody extends StatelessWidget {
 
   Widget _achievementsSection(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -144,28 +179,32 @@ class _ProfileBody extends StatelessWidget {
 
     final banners = [
       _Banner(
+        key: 'first',
         asset: 'assets/banners/first_banner.jpg',
         title: 'حفّار',
         desc: 'حفر طريقك نحو النجاح',
-        unlocked: true,
+        unlocked: _bannerUnlocks['first'] ?? true,
       ),
       _Banner(
+        key: 'second',
         asset: 'assets/banners/second_banner.jpg',
-        title: 'المثابر',
+        title: 'ارضنا الطيبة',
         desc: '١٠ أيام + ٢٠ درس',
-        unlocked: streak >= 10 && lessons >= 20,
+        unlocked: _bannerUnlocks['second'] ?? (streak >= 10 && lessons >= 20),
       ),
       _Banner(
+        key: 'third',
         asset: 'assets/banners/third_banner_v1.jpg',
         title: 'أنا التوب والباقي فوتوشب',
         desc: '٣٠ يوم + ٤٠ درس',
-        unlocked: streak >= 30 && lessons >= 40,
+        unlocked: _bannerUnlocks['third'] ?? (streak >= 30 && lessons >= 40),
       ),
       _Banner(
+        key: 'fourth',
         asset: 'assets/banners/third_banner_v2.jpg',
         title: 'أنا التوب والباقي فوتوشب',
-        desc: 'البنات كمان!',
-        unlocked: streak >= 30 && lessons >= 40,
+        desc: '٣٠ يوم + ٤٠ درس',
+        unlocked: _bannerUnlocks['fourth'] ?? (streak >= 30 && lessons >= 40),
       ),
     ];
 
@@ -185,11 +224,11 @@ class _ProfileBody extends StatelessWidget {
 
   Widget _bannerCard(BuildContext context, _Banner b) {
     return InkWell(
-      onTap: b.unlocked ? () => _showBannerPicker(context, b) : null,
+      onTap: b.unlocked ? () => _showBannerDialog(b) : null,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         decoration: BoxDecoration(
-          color: b.unlocked ? Colors.white : HaffarColors.surfaceHigh,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: b.unlocked
@@ -200,20 +239,27 @@ class _ProfileBody extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: b.unlocked
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(14),
+              // Banner art always shows; locked cards dim it and overlay
+              // the lock on top instead of hiding the image.
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(14),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // fitWidth: whole banner visible; the leftover vertical
+                    // slack blends into the white card (and the lock scrim).
+                    Image.asset(b.asset, fit: BoxFit.fitWidth),
+                    if (!b.unlocked) ...[
+                      Container(color: Colors.black38),
+                      const Center(
+                        child: Icon(Icons.lock, size: 32, color: Colors.white),
                       ),
-                      child: Image.asset(b.asset, fit: BoxFit.cover),
-                    )
-                  : Center(
-                      child: Icon(
-                        Icons.lock,
-                        size: 32,
-                        color: HaffarColors.grey3,
-                      ),
-                    ),
+                    ],
+                  ],
+                ),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(8),
@@ -246,79 +292,78 @@ class _ProfileBody extends StatelessWidget {
     );
   }
 
-  void _showBannerPicker(BuildContext context, _Banner selected) {
-    final banners = [
-      _Banner(
-        asset: 'assets/banners/third_banner_v1.jpg',
-        title: 'الرجل',
-        desc: '',
-        unlocked: true,
-      ),
-      _Banner(
-        asset: 'assets/banners/third_banner_v2.jpg',
-        title: 'الأنثى',
-        desc: '',
-        unlocked: true,
-      ),
-    ];
-    showDialog(
+  /// Mid-screen dialog: full banner preview + a flat primary "اختيار"
+  /// button that persists the choice server-side and updates the header.
+  void _showBannerDialog(_Banner b) {
+    showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => Dialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'اختر بانرك',
-          style: TextStyle(
-            fontFamily: 'BeVietnamPro',
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: banners.map((b) {
-            return InkWell(
-              onTap: () {
-                // Save selection (persist via SharedPreferences or DB in future)
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('تم اختيار: ${b.title}')),
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        b.asset,
-                        width: 80,
-                        height: 53,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      b.title,
-                      style: const TextStyle(
-                        fontFamily: 'BeVietnamPro',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  width: (MediaQuery.sizeOf(context).width - 64)
+                      .clamp(240.0, 360.0)
+                      .toDouble(),
+                  child: AspectRatio(
+                    aspectRatio: BannerRepository.aspectRatio,
+                    child: Image.asset(b.asset, fit: BoxFit.cover),
+                  ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: HaffarColors.primary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () async {
+                    try {
+                      await BannerRepository(
+                        Supabase.instance.client,
+                      ).setSelected(b.key);
+                    } catch (e, st) {
+                      AppToast.error(
+                        e,
+                        fallback: 'تعذر حفظ البانر — حاول مرة أخرى',
+                        logContext: 'setSelectedBanner',
+                        st: st,
+                      );
+                      return; // keep the dialog open for a retry
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      context.read<EconomyProvider>().applySelectedBanner(
+                        b.key,
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'اختيار',
+                    style: TextStyle(
+                      fontFamily: 'BeVietnamPro',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

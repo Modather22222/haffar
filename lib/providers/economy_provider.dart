@@ -25,6 +25,9 @@ class EconomyProvider extends ChangeNotifier {
   String league = 'bronze';
   bool isSubscribed = false;
 
+  /// profiles.selected_banner key ('first'…'fourth'); null → threshold pick.
+  String? selectedBanner;
+
   // ── Hearts ───────────────────────────────────────────────────────────────
   int hearts = GameConstants.maxHearts;
   DateTime? heartsUpdatedAt;
@@ -136,9 +139,17 @@ class EconomyProvider extends ChangeNotifier {
     gems = (profile['gems'] as int?) ?? gems;
     league = (profile['league'] as String?) ?? league;
     isSubscribed = (profile['is_subscribed'] as bool?) ?? false;
+    selectedBanner = profile['selected_banner'] as String?;
     hearts = (profile['hearts'] as int?) ?? hearts;
     final hu = profile['hearts_updated_at'] as String?;
     if (hu != null) heartsUpdatedAt = DateTime.tryParse(hu)?.toUtc();
+    notifyListeners();
+  }
+
+  /// Applies a banner chosen in the حسابي dialog (server already validated
+  /// and persisted it) so the header updates without a re-hydrate.
+  void applySelectedBanner(String bannerKey) {
+    selectedBanner = bannerKey;
     notifyListeners();
   }
 

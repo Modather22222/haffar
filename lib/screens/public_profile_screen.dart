@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design_system/colors.dart';
+import '../services/banner_repository.dart';
 import '../services/xp_repository.dart';
 import '../utils/app_error.dart';
 import '../utils/app_logger.dart';
@@ -64,6 +65,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       (_profile?['display_name'] as String?) ?? widget.fallbackName ?? 'البطل';
 
   String _bannerAsset() {
+    // Server-stored choice wins; thresholds only as a legacy fallback.
+    final key = _profile?['selected_banner'] as String?;
+    final selected = key == null ? null : BannerRepository.assets[key];
+    if (selected != null) return selected;
     final streak = (_profile?['streak'] as num?)?.toInt() ?? 0;
     final lessons = (_profile?['completed_lessons'] as num?)?.toInt() ?? 0;
     if (streak >= 30 && lessons >= 40) {
