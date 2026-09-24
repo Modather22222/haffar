@@ -103,13 +103,19 @@ Deno.serve(async (req) => {
     );
 
     // Day boundary matches the streak RPCs: UTC date.
-    const today = new Date().toISOString().slice(0, 10);
+    // Only "yesterday" qualifies: completed today → already safe; 2+ days
+    // stale → refresh_streak will zero it anyway, so the alert is moot.
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const lastCall = new Date(now.getTime());
+    lastCall.setUTCDate(lastCall.getUTCDate() - 1);
+    const yesterday = lastCall.toISOString().slice(0, 10);
 
     const { data: users, error } = await supabase
       .from("profiles")
       .select("id, streak, push_tokens(token)")
       .gt("streak", 0)
-      .lt("last_streak_date", today);
+      .eq("last_streak_date", yesterday);
     if (error) throw error;
 
     let sent = 0;
