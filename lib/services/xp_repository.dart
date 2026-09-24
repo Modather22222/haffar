@@ -42,7 +42,8 @@ class XpRepository {
     return rows.first as Map<String, dynamic>;
   }
 
-  /// Aggregates total XP earned this ISO week (Saturday 00:00 to Friday 23:59 Africa/Khartoum).
+  /// Aggregates XP earned this league week (Saturday 00:00 → Friday 23:59:59
+  /// Africa/Khartoum). The window is computed server-side.
   Future<int> getWeeklyXp() async {
     final uid = _uid;
     if (uid == null) return 0;
@@ -55,35 +56,20 @@ class XpRepository {
     return (rows.first['week_xp'] as num).toInt();
   }
 
-  /// Top-20 leaderboard sorted by weekly XP descending.
+  /// Top-20 leaderboard for the current دوري حفّار week (Saturday 00:00 →
+  /// Friday 23:59:59 Africa/Khartoum), sorted by week XP descending.
+  /// The window is computed server-side; no client timezone input.
   Future<List<Map<String, dynamic>>> getLeaderboard(int limit) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final startOfWeek = _startOfCurrentWeek();
-
-    // Sum all xp_events for this week per user, join with profiles for display data
     final result = await _client.rpc(
       'get_weekly_leaderboard',
-      params: {
-        'p_start': startOfWeek,
-        'p_limit': limit,
-        'p_current_user_id': uid,
-      },
+      params: {'p_limit': limit, 'p_current_user_id': uid},
     );
 
     return (result as List<dynamic>)
         .map((row) => row as Map<String, dynamic>)
         .toList();
-  }
-
-  String _startOfCurrentWeek() {
-    final now = DateTime.now();
-    // Saturday is day 6 in ISO (Monday=1), or weekday=6
-    // Find last Saturday 00:00 local time
-    final dayOfWeek = now.weekday; // 1=Mon, 6=Sat, 7=Sun
-    final daysSinceSaturday = (dayOfWeek + 1) % 7;
-    final start = DateTime(now.year, now.month, now.day - daysSinceSaturday);
-    return start.toUtc().toIso8601String();
   }
 }
