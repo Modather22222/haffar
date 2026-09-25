@@ -1,0 +1,70 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ARM64 Debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      FLUTTER_VERSION: "3.41.9"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+          cache-key: flutter-:pub-get-:-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: Validate secrets
+        run: |
+          test -n "${{ secrets.SUPABASE_URL }}" || { echo "::error::SUPABASE_URL secret is empty"; exit 1; }
+          test -n "${{ secrets.SUPABASE_ANON_KEY }}" || { echo "::error::SUPABASE_ANON_KEY secret is empty"; exit 1; }
+        shell: bash
+
+      - name: Write env.json
+        run: |
+          jq -n \
+            --arg SUPABASE_URL "${{ secrets.SUPABASE_URL }}" \
+            --arg SUPABASE_ANON_KEY "${{ secrets.SUPABASE_ANON_KEY }}" \
+            '{SUPABASE_URL: $SUPABASE_URL, SUPABASE_ANON_KEY: $SUPABASE_ANON_KEY}' \
+            > env.json
+          jq -e 'has("SUPABASE_URL") and has("SUPABASE_ANON_KEY") and ((.SUPABASE_URL | length) > 0) and ((.SUPABASE_ANON_KEY | length) > 0)' env.json > /dev/null
+          echo "env.json written with dart-defines: $(jq -r 'keys | join(", ")' env.json)"
+        shell: bash
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Debug APK (ARM64)
+        run: |
+          flutter build apk \
+            --debug \
+            --target-platform=android-arm64 \
+            --dart-define-from-file=env.json
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: haffar-debug-arm64
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
