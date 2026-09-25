@@ -89,7 +89,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('بعتنا رابط إعادة تعيين كلمة المرور على إيميلك'),
+          content: Text('رسلنا رابط إعادة تعيين كلمة المرور على إيميلك'),
         ),
       );
     } catch (e, st) {
@@ -238,21 +238,6 @@ class _SignInScreenState extends State<SignInScreen> {
                           : HaffarPrimaryButtonState.disabled,
                       label: _loading ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول',
                       onPressed: _canSubmit ? _signIn : null,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: _loading
-                        ? null
-                        : () => context.push(Routes.onboardingFourteen),
-                    child: Text(
-                      'إنشاء حساب جديد',
-                      style: TextStyle(
-                        fontFamily: 'DIN2014Rounded',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: HaffarColors.grey3,
-                      ),
                     ),
                   ),
                 ],
