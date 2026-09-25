@@ -42,6 +42,7 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _uploading = false;
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -143,6 +144,93 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
       'gif' => 'image/gif',
       _ => 'image/jpeg',
     };
+  }
+
+  /// Action row above the rich editor: image insert, student preview, and the
+  /// fullscreen toggle (⤢ / minimize). Shared by the compact card and the
+  /// expanded editing mode.
+  Widget _editorActions({required bool expanded}) {
+    return Row(
+      children: [
+        OutlinedButton.icon(
+          onPressed: _uploading ? null : _pickAndUploadImage,
+          icon: _uploading
+              ? const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.image_outlined, size: 18),
+          label: Text(
+            _uploading ? 'جارٍ الرفع...' : 'إدراج صورة',
+            style: const TextStyle(fontFamily: kAdminFont, fontSize: 12),
+          ),
+        ),
+        const Spacer(),
+        TextButton.icon(
+          onPressed: _showPreview,
+          icon: const Icon(Icons.visibility_outlined, size: 16),
+          label: const Text(
+            'معاينة',
+            style: TextStyle(fontFamily: kAdminFont, fontSize: 12),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: () => setState(() => _expanded = !expanded),
+          icon: Icon(
+            expanded ? Icons.close_fullscreen : Icons.open_in_full,
+            size: 16,
+          ),
+          label: Text(
+            expanded ? 'تصغير' : 'ملء الشاشة',
+            style: const TextStyle(fontFamily: kAdminFont, fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _editorToolbar() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: QuillSimpleToolbar(
+        controller: _summaryController,
+        config: const QuillSimpleToolbarConfig(
+          showAlignmentButtons: true,
+          showDirection: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _quillEditor({required bool expanded}) {
+    return QuillEditor.basic(
+      controller: _summaryController,
+      config: QuillEditorConfig(
+        placeholder: 'اكتب ملخص الدرس هنا...',
+        padding: const EdgeInsets.all(12),
+        minHeight: expanded ? null : 200,
+        expands: expanded,
+        embedBuilders: [
+          QuillEditorImageEmbedBuilder(
+            config: const QuillEditorImageEmbedConfig(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _editorFrame({required bool expanded, required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: HaffarColors.outline.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
+        children: [_editorToolbar(), const Divider(height: 1), child],
+      ),
+    );
   }
 
   void _addPoint() {
@@ -292,6 +380,29 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
         body: AdminErrorView(message: adminMessage(_error), onRetry: _load),
       );
     }
+    if (_expanded) {
+      return Scaffold(
+        appBar: _appBar(),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _editorActions(expanded: true),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _editorFrame(
+                    expanded: true,
+                    child: Expanded(child: _quillEditor(expanded: true)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: _appBar(),
       body: SafeArea(
@@ -323,82 +434,11 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _uploading ? null : _pickAndUploadImage,
-                        icon: _uploading
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.image_outlined, size: 18),
-                        label: Text(
-                          _uploading ? 'جارٍ الرفع...' : 'إدراج صورة',
-                          style: const TextStyle(
-                            fontFamily: kAdminFont,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: _showPreview,
-                        icon: const Icon(Icons.visibility_outlined, size: 16),
-                        label: const Text(
-                          'معاينة',
-                          style: TextStyle(
-                            fontFamily: kAdminFont,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _editorActions(expanded: false),
                   const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: HaffarColors.outline.withValues(alpha: 0.3),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: QuillSimpleToolbar(
-                            controller: _summaryController,
-                            config: const QuillSimpleToolbarConfig(
-                              showAlignmentButtons: false,
-                              showDirection: false,
-                              showSearchButton: false,
-                              showSubscript: false,
-                              showSuperscript: false,
-                              showFontFamily: false,
-                            ),
-                          ),
-                        ),
-                        const Divider(height: 1),
-                        QuillEditor.basic(
-                          controller: _summaryController,
-                          config: QuillEditorConfig(
-                            placeholder: 'اكتب ملخص الدرس هنا...',
-                            padding: const EdgeInsets.all(12),
-                            minHeight: 200,
-                            embedBuilders: [
-                              QuillEditorImageEmbedBuilder(
-                                config: const QuillEditorImageEmbedConfig(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  _editorFrame(
+                    expanded: false,
+                    child: _quillEditor(expanded: false),
                   ),
                 ],
               ),
