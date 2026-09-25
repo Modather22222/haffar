@@ -80,11 +80,6 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => context.go(Routes.signup),
-                child: const Text('إنشاء حساب جديد'),
-              ),
             ],
           ),
         ),

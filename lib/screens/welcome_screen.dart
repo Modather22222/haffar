@@ -1,8 +1,6 @@
 import '../design_system/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 import '../widgets/mascot.dart';
 
@@ -41,8 +39,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               _cta(context, 'ابدأ الآن', HaffarColors.primary, () {
-                context.read<ProgressProvider>().completeOnboarding();
-                context.go(Routes.signup);
+                context.go(Routes.welcome);
               }),
               const SizedBox(height: 12),
               _cta(
