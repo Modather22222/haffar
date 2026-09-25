@@ -6,6 +6,7 @@ import '../../design_system/colors.dart';
 import '../../models/admin_stats.dart';
 import '../../services/admin_repository.dart';
 import '../../utils/app_toast.dart';
+import 'admin_push_dialog.dart';
 import 'admin_widgets.dart';
 
 /// One user's full profile: stats, per-subject progress, recent activity
@@ -124,66 +125,128 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
     });
   }
 
-  Future<void> _sendPushDialog() async {
-    final ctrl = TextEditingController();
-    final sent = await showDialog<bool>(
+  Future<void> _sendPushDialog() => showAdminPushDialog(
+    context: context,
+    repo: _repo,
+    userId: widget.userId,
+    title: 'إرسال إشعار لهذا المستخدم',
+  );
+
+  Future<void> _grantDialog() async {
+    var target = AdminGrantTarget.hearts;
+    final ctrl = TextEditingController(text: '5');
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          'إرسال إشعار لهذا المستخدم',
-          style: TextStyle(
-            fontFamily: kAdminFont,
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLines: 3,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            hintText: 'نص الإشعار…',
-            hintStyle: TextStyle(fontFamily: kAdminFont, fontSize: 14),
-          ),
-          style: const TextStyle(fontFamily: kAdminFont, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'إلغاء',
-              style: TextStyle(fontFamily: kAdminFont),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text(
+            'منح موارد',
+            style: TextStyle(
+              fontFamily: kAdminFont,
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'إرسال',
-              style: TextStyle(fontFamily: kAdminFont),
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final opt in const [
+                    (AdminGrantTarget.hearts, 'أرواح'),
+                    (AdminGrantTarget.gems, 'جواهر'),
+                    (AdminGrantTarget.xp, 'XP'),
+                  ])
+                    ChoiceChip(
+                      label: Text(
+                        opt.$2,
+                        style: TextStyle(
+                          fontFamily: kAdminFont,
+                          fontSize: 12,
+                          fontWeight: target == opt.$1
+                              ? FontWeight.w800
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      selected: target == opt.$1,
+                      onSelected: (_) => setDialogState(() => target = opt.$1),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'الكمية',
+                  hintText: '1–1000',
+                  labelStyle: TextStyle(fontFamily: kAdminFont, fontSize: 13),
+                  hintStyle: TextStyle(fontFamily: kAdminFont, fontSize: 13),
+                ),
+                style: const TextStyle(fontFamily: kAdminFont, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                target == AdminGrantTarget.hearts
+                    ? 'الأرواح محدودة بـ 7 — يُمنح حتى الحد المتاح.'
+                    : 'يُسجَّل المنح في سجل الأحداث (admin_grant).',
+                style: const TextStyle(
+                  fontFamily: kAdminFont,
+                  fontSize: 11,
+                  color: HaffarColors.textSecondary,
+                ),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text(
+                'إلغاء',
+                style: TextStyle(fontFamily: kAdminFont),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text(
+                'منح',
+                style: TextStyle(fontFamily: kAdminFont),
+              ),
+            ),
+          ],
+        ),
       ),
     );
-    if (sent != true || ctrl.text.trim().isEmpty || !mounted) return;
-    final body = ctrl.text.trim();
+    if (confirmed != true || !mounted) return;
+    final amount = int.tryParse(ctrl.text.trim()) ?? 0;
+    if (amount < 1 || amount > 1000) {
+      AppToast.show('أدخل كمية بين 1 و1000', isError: true);
+      return;
+    }
     await _runGuarded(() async {
       try {
-        final result = await _repo.sendNotification(
-          body: body,
+        final r = await _repo.grantToUser(
           userId: widget.userId,
+          target: target,
+          amount: amount,
         );
+        await _load();
         if (mounted) {
-          AppToast.success('تم الإرسال إلى ${result.targets} جهاز');
+          final capped =
+              target == AdminGrantTarget.hearts && r.applied < amount;
+          AppToast.success(
+            capped
+                ? 'تم منح ${fmtInt(r.applied)} روح (الحد ${fmtInt(r.hearts)}/7)'
+                : 'تم المنح: ${fmtInt(r.applied)}',
+          );
         }
       } catch (e) {
         if (mounted) {
-          AppToast.error(
-            e,
-            fallback: 'تعذر إرسال الإشعار',
-            logContext: 'admin_push',
-          );
+          AppToast.error(e, fallback: 'تعذر المنح', logContext: 'admin_grant');
         }
       }
     });
@@ -311,6 +374,16 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                     color: HaffarColors.grey2,
                   ),
                 ),
+                Text(
+                  p.lastActiveAt == null
+                      ? 'لم ينشط بعد'
+                      : 'آخر نشاط ${DateFormat('yyyy/MM/dd HH:mm').format(p.lastActiveAt!)}',
+                  style: const TextStyle(
+                    fontFamily: kAdminFont,
+                    fontSize: 11,
+                    color: HaffarColors.grey2,
+                  ),
+                ),
               ],
             ),
           ),
@@ -397,6 +470,18 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                   icon: const Icon(Icons.notifications_active, size: 18),
                   label: const Text(
                     'إرسال إشعار',
+                    style: TextStyle(fontFamily: kAdminFont),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _grantDialog,
+                  icon: const Icon(Icons.card_giftcard, size: 18),
+                  label: const Text(
+                    'منح موارد (أرواح/جواهر/XP)',
                     style: TextStyle(fontFamily: kAdminFont),
                   ),
                 ),

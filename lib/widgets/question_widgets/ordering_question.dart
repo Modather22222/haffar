@@ -5,6 +5,7 @@ import 'question_base.dart';
 class OrderingQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final List<String> options;
   final List<String> correctOrder;
   final int xpReward;
@@ -18,6 +19,7 @@ class OrderingQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     required this.options,
     required this.correctOrder,
     required this.xpReward,
@@ -65,6 +67,7 @@ class _OrderingQuestionState extends State<OrderingQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,

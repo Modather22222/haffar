@@ -38,6 +38,12 @@ abstract class Routes {
   static const signIn = '/sign-in';
   static const admin = '/admin';
   static const adminUser = '/admin/user';
+  static const adminQuestions = '/admin/questions';
+  static const adminContentEditor = '/admin/content/editor';
+  static const adminContentUnits = '/admin/content/editor/units';
+  static const adminContentLesson = '/admin/content/editor/lesson';
+  static const adminContentQuestions = '/admin/content/editor/questions';
+  static const adminContentQuestion = '/admin/content/editor/question';
 }
 
 /// Typed arguments for the /question route

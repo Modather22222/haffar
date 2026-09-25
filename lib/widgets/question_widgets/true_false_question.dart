@@ -5,6 +5,7 @@ import 'question_base.dart';
 class TrueFalseQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final int xpReward;
   final bool correctAnswer;
   final VoidCallback onBack;
@@ -17,6 +18,7 @@ class TrueFalseQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     required this.xpReward,
     required this.correctAnswer,
     required this.onBack,
@@ -45,6 +47,7 @@ class _TrueFalseQuestionState extends State<TrueFalseQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,

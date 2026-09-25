@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../design_system/colors.dart';
@@ -33,6 +34,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
   bool _loadingMore = false;
   Object? _error;
   String _search = '';
+
+  /// 'all' | 'active_7d' | 'dormant_7d' (audience segment filter).
+  String _segment = 'all';
 
   @override
   bool get wantKeepAlive => true;
@@ -72,6 +76,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
     try {
       final page = await _repo.fetchUsers(
         search: _search,
+        segment: _segment == 'all' ? null : _segment,
         limit: _pageSize,
         offset: reset ? 0 : _users.length,
       );
@@ -145,6 +150,37 @@ class _AdminUsersScreenState extends State<AdminUsersScreen>
                   ),
                 ),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final opt in const [
+                  ('all', 'الكل'),
+                  ('active_7d', 'نشطون (7 أيام)'),
+                  ('dormant_7d', 'خاملون (7 أيام)'),
+                ])
+                  ChoiceChip(
+                    label: Text(
+                      opt.$2,
+                      style: TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 12,
+                        fontWeight: _segment == opt.$1
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    selected: _segment == opt.$1,
+                    onSelected: (_) {
+                      setState(() => _segment = opt.$1);
+                      _load(reset: true);
+                    },
+                  ),
+              ],
             ),
           ),
           Padding(
@@ -324,6 +360,10 @@ class _UserTile extends StatelessWidget {
                       _miniChip('سلسلة ${fmtInt(user.streak)}'),
                       _miniChip('دروس ${fmtInt(user.lessonsDone)}'),
                       if (user.league.isNotEmpty) _miniChip(user.league),
+                      if (user.lastActiveAt != null)
+                        _miniChip(
+                          'آخر نشاط ${DateFormat('MM/dd').format(user.lastActiveAt!)}',
+                        ),
                     ],
                   ),
                 ],

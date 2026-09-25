@@ -8,6 +8,7 @@ import 'question_base.dart';
 class ClassificationQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final List<String> items;
   final List<String> itemCategories;
   final String zoneOneLabel;
@@ -23,6 +24,7 @@ class ClassificationQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     required this.items,
     required this.itemCategories,
     this.zoneOneLabel = 'جهاز إدخال',
@@ -95,6 +97,7 @@ class _ClassificationQuestionState extends State<ClassificationQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,

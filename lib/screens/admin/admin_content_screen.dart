@@ -1,10 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../design_system/colors.dart';
 import '../../models/admin_stats.dart';
 import '../../services/admin_repository.dart';
+import '../../utils/routes.dart';
 import 'admin_widgets.dart';
 
 /// Tab 3 — content inventory per subject: unit/lesson/question counts,
@@ -67,10 +69,148 @@ class _AdminContentScreenState extends State<AdminContentScreen>
       onRefresh: _load,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: subjects.length,
-        itemBuilder: (context, i) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _SubjectCard(stat: subjects[i]),
+        itemCount: subjects.length + 1,
+        itemBuilder: (context, i) {
+          if (i == 0) {
+            return const Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: _ContentEditorEntry(),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: _QuestionAuditEntry(),
+                ),
+              ],
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _SubjectCard(stat: subjects[i - 1]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Entry tile for the full content editor (/admin/content/editor).
+class _ContentEditorEntry extends StatelessWidget {
+  const _ContentEditorEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminSectionCard(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => context.push(Routes.adminContentEditor),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: HaffarColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.edit_note_outlined,
+                  size: 20,
+                  color: HaffarColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'محرر المحتوى',
+                      style: TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: HaffarColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'إضافة وتعديل المواد والوحدات والدروس والأسئلة بصيغة غنية',
+                      style: TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 11,
+                        color: HaffarColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_left, color: HaffarColors.grey3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Entry tile for the per-question accuracy audit (/admin/questions).
+class _QuestionAuditEntry extends StatelessWidget {
+  const _QuestionAuditEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminSectionCard(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => context.push(Routes.adminQuestions),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: HaffarColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.fact_check_outlined,
+                  size: 20,
+                  color: HaffarColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'فحص الأسئلة',
+                      style: TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: HaffarColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'دقة كل سؤال حسب إجابات الطلاب — اكتشف المفاتيح الخاطئة',
+                      style: TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 11,
+                        color: HaffarColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_left, color: HaffarColors.grey3),
+            ],
+          ),
         ),
       ),
     );
@@ -241,6 +381,18 @@ class _SubjectCard extends StatelessWidget {
                       color: HaffarColors.textPrimary,
                     ),
                   ),
+                  if (l.attempts > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      fmtPct(l.accuracy ?? 0),
+                      style: TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: (l.accuracy ?? 0) < 50 ? kChartRed : kChartGreen,
+                      ),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 3),

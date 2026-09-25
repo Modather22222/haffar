@@ -26,6 +26,15 @@ dependencies:
   firebase_messaging: ^16.7.0
   flutter_local_notifications: ^22.3.1
   fl_chart: ^1.2.0
+  # Pinned <10: package_info_plus 10+ requires win32 ^6, which conflicts with
+  # flutter_quill's quill_native_bridge_windows (win32 ^5).
+  package_info_plus: ^9.0.0
+  flutter_quill: 11.0.0
+  flutter_quill_extensions: ^11.0.0
+  markdown_quill: 4.3.0
+  flutter_markdown_plus: ^1.0.12
+  image_picker: ^1.2.3
+  markdown: ^7.3.1
 
 dev_dependencies:
   flutter_test:

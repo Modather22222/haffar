@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,6 +14,7 @@ import 'providers/session_provider.dart';
 import 'utils/app_error.dart';
 import 'utils/app_logger.dart';
 import 'utils/app_toast.dart';
+import 'utils/client_error_reporter.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_one_screen.dart';
 import 'screens/sign_in_loading_screen.dart';
@@ -50,6 +51,12 @@ import 'screens/onboarding_fifteen_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_user_detail_screen.dart';
+import 'screens/admin/admin_questions_screen.dart';
+import 'screens/admin/content_editor/content_editor_screen.dart';
+import 'screens/admin/content_editor/lesson_editor_screen.dart';
+import 'screens/admin/content_editor/question_editor_screen.dart';
+import 'screens/admin/content_editor/question_list_screen.dart';
+import 'screens/admin/content_editor/units_editor_screen.dart';
 import 'models/question.dart';
 import 'models/subject.dart';
 import 'utils/routes.dart';
@@ -64,15 +71,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppLog.info('main() start');
   // In release mode an uncaught async error kills the app with no message.
-  // Report instead of crashing so the user always sees a screen.
-  FlutterError.onError = (details) {
-    AppLog.error('FlutterError', details.exception, details.stack);
-    FlutterError.presentError(details);
-  };
-  PlatformDispatcher.instance.onError = (error, stack) {
-    AppLog.error('Uncaught async error', error, stack);
-    return true;
-  };
+  // Report instead of crashing so the user always sees a screen — and ship
+  // the error to the admin dashboard (debounced, PII-scrubbed).
+  ClientErrorReporter.instance.install();
   // Log config shape only — never the key itself.
   AppLog.info(
     'supabase host=${Uri.tryParse(_supabaseUrl)?.host ?? '(bad-url)'} '
@@ -99,7 +100,10 @@ Future<void> main() async {
   // Push is best-effort: logs on failure, never blocks startup.
   await PushService.instance.init();
   AppLog.info('runApp (initError=${initError != null})');
-  runApp(HaffarApp(initError: initError));
+  runZonedGuarded(
+    () => runApp(HaffarApp(initError: initError)),
+    ClientErrorReporter.instance.recordZoneError,
+  );
 }
 
 class HaffarApp extends StatefulWidget {
@@ -437,6 +441,48 @@ final GoRouter router = GoRouter(
         final uid = state.uri.queryParameters['id'] ?? '';
         return AdminUserDetailScreen(userId: uid);
       },
+    ),
+    GoRoute(
+      path: Routes.adminQuestions,
+      builder: (_, _) => const AdminQuestionsScreen(),
+    ),
+    GoRoute(
+      path: Routes.adminContentEditor,
+      builder: (_, _) => const ContentEditorScreen(),
+    ),
+    GoRoute(
+      path: Routes.adminContentUnits,
+      builder: (_, state) => ContentUnitsScreen(
+        subjectId: state.uri.queryParameters['subject'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: Routes.adminContentLesson,
+      builder: (_, state) => LessonEditorScreen(
+        lessonId: state.uri.queryParameters['id'] ?? '',
+        subjectId: state.uri.queryParameters['subject'] ?? '',
+      ),
+    ),
+    GoRoute(
+      path: Routes.adminContentQuestions,
+      builder: (_, state) => ContentQuestionListScreen(
+        subjectId: state.uri.queryParameters['subject'] ?? '',
+        lessonIndex:
+            int.tryParse(state.uri.queryParameters['index'] ?? '') ?? 0,
+        lessonNumber:
+            int.tryParse(state.uri.queryParameters['number'] ?? '') ?? 1,
+      ),
+    ),
+    GoRoute(
+      path: Routes.adminContentQuestion,
+      builder: (_, state) => QuestionEditorScreen(
+        subjectId: state.uri.queryParameters['subject'] ?? '',
+        lessonIndex:
+            int.tryParse(state.uri.queryParameters['index'] ?? '') ?? 0,
+        lessonNumber:
+            int.tryParse(state.uri.queryParameters['number'] ?? '') ?? 1,
+        questionId: state.uri.queryParameters['id'],
+      ),
     ),
     GoRoute(
       path: Routes.signingIn,

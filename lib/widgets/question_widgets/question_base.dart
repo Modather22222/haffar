@@ -1,5 +1,6 @@
 import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
+import '../markdown_text.dart';
 import 'question_header.dart';
 
 /// Base widget shared by ALL question types.
@@ -9,6 +10,7 @@ class QuestionBase extends StatelessWidget {
   final String questionText;
   final String? hint;
   final String? info;
+  final String? imageUrl;
   final int xpReward;
   final VoidCallback onBack;
   final VoidCallback onSkip;
@@ -20,6 +22,7 @@ class QuestionBase extends StatelessWidget {
     required this.questionText,
     this.hint,
     this.info,
+    this.imageUrl,
     required this.xpReward,
     required this.onBack,
     required this.onSkip,
@@ -38,8 +41,9 @@ class QuestionBase extends StatelessWidget {
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
+            child: MarkdownText(
               questionText,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'BeVietnamPro',
                 fontSize: 20,
@@ -47,9 +51,15 @@ class QuestionBase extends StatelessWidget {
                 height: 1.4,
                 color: HaffarColors.textPrimary,
               ),
-              textAlign: TextAlign.center,
             ),
           ),
+          if (imageUrl != null && imageUrl!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: _QuestionImage(url: imageUrl!),
+            ),
+          ],
           const SizedBox(height: 20),
           if (hint != null)
             Padding(
@@ -68,6 +78,51 @@ class QuestionBase extends StatelessWidget {
             child: buildBody(context),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuestionImage extends StatelessWidget {
+  const _QuestionImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 260),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => Container(
+            padding: const EdgeInsets.all(12),
+            color: HaffarColors.surfaceHigh,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image_outlined,
+                  size: 18,
+                  color: HaffarColors.grey3,
+                ),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'تعذّر تحميل الصورة',
+                    style: TextStyle(
+                      fontFamily: 'PlusJakartaSans',
+                      fontSize: 12,
+                      color: HaffarColors.grey3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

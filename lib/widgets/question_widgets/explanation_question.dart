@@ -1,10 +1,12 @@
 import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
+import '../markdown_text.dart';
 import 'question_base.dart';
 
 class ExplanationQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final String? passage;
   final int xpReward;
   final VoidCallback onBack;
@@ -17,6 +19,7 @@ class ExplanationQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     this.passage,
     required this.xpReward,
     required this.onBack,
@@ -61,6 +64,7 @@ class _ExplanationQuestionState extends State<ExplanationQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,
@@ -77,7 +81,7 @@ class _ExplanationQuestionState extends State<ExplanationQuestion> {
                   color: HaffarColors.outline.withValues(alpha: 0.2),
                 ),
               ),
-              child: Text(
+              child: MarkdownText(
                 widget.passage!,
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',

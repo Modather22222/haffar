@@ -55,6 +55,7 @@ class QuestionWidgetFactory {
         return MultipleChoiceQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           hint: question.hint,
           options: question.options,
           correctIndex: question.correctIndex,
@@ -69,6 +70,7 @@ class QuestionWidgetFactory {
         return TrueFalseQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           xpReward: question.xpReward,
           correctAnswer: question.correctIndex == 0,
           onBack: onBack,
@@ -81,6 +83,7 @@ class QuestionWidgetFactory {
         return FillBlankQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           info: question.hint,
           correctWords: question.correctWords ?? [],
           xpReward: question.xpReward,
@@ -96,6 +99,7 @@ class QuestionWidgetFactory {
         return MatchingQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           leftItems: opts.take(half).toList(),
           rightItems: opts.skip(half).take(half).toList(),
           xpReward: question.xpReward,
@@ -110,6 +114,7 @@ class QuestionWidgetFactory {
           pathTitle: pathTitle,
           term: question.text,
           questionText: 'اختر التعريف الصحيح للمصطلح التالي:',
+          imageUrl: question.imageUrl,
           options: question.options,
           correctIndex: question.correctIndex,
           xpReward: question.xpReward,
@@ -123,6 +128,7 @@ class QuestionWidgetFactory {
         return OrderingQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           options: question.options,
           correctOrder: question.correctWords ?? question.options,
           xpReward: question.xpReward,
@@ -137,6 +143,7 @@ class QuestionWidgetFactory {
           pathTitle: pathTitle,
           passage: question.passage ?? question.text,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           options: question.options,
           correctIndex: question.correctIndex,
           xpReward: question.xpReward,
@@ -150,6 +157,7 @@ class QuestionWidgetFactory {
         return CalculationQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           hint: question.hint,
           formula: question.passage,
           options: question.options,
@@ -180,6 +188,7 @@ class QuestionWidgetFactory {
         return ClassificationQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           items: question.options,
           itemCategories: question.itemCategories ?? [],
           xpReward: question.xpReward,
@@ -194,6 +203,7 @@ class QuestionWidgetFactory {
         return ExplanationQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
+          imageUrl: question.imageUrl,
           passage: question.passage,
           xpReward: question.xpReward,
           onBack: onBack,

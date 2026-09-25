@@ -5,6 +5,7 @@ import 'question_base.dart';
 class MultipleChoiceQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final String? hint;
   final List<String> options;
   final int correctIndex;
@@ -19,6 +20,7 @@ class MultipleChoiceQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     this.hint,
     required this.options,
     required this.correctIndex,
@@ -48,6 +50,7 @@ class _MultipleChoiceQuestionState extends State<MultipleChoiceQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       hint: widget.hint,
       xpReward: widget.xpReward,
       onBack: widget.onBack,

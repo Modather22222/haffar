@@ -54,6 +54,8 @@ void main() {
       'questions': 1800,
       'push_tokens': 30,
       'notifications_today': 1,
+      'subscribed_users': 5,
+      'leagues': {'bronze': 115, 'mvp': 5},
       'series': [
         {
           'day': '2026-09-12',
@@ -87,6 +89,8 @@ void main() {
       expect(o.questions, 1800);
       expect(o.pushTokens, 30);
       expect(o.notificationsToday, 1);
+      expect(o.subscribedUsers, 5);
+      expect(o.leagues, {'bronze': 115, 'mvp': 5});
       expect(o.series, hasLength(2));
       expect(o.series.first.day, DateTime(2026, 9, 12));
       expect(o.series.last.lessons, 6);
@@ -96,6 +100,8 @@ void main() {
       final o = AdminOverview.fromJson(const {});
       expect(o.totalUsers, 0);
       expect(o.avgAccuracy, 0);
+      expect(o.subscribedUsers, 0);
+      expect(o.leagues, isEmpty);
       expect(o.series, isEmpty);
     });
   });
@@ -114,6 +120,7 @@ void main() {
       'is_admin': true,
       'created_at': '2026-08-01T10:00:00+00:00',
       'last_streak_date': '2026-09-25',
+      'last_active_at': '2026-09-25T12:44:12.514162+00:00',
       'lessons_done': 4,
     };
 
@@ -127,6 +134,8 @@ void main() {
       expect(u.isAdmin, isTrue);
       expect(u.isSubscribed, isFalse);
       expect(u.lastStreakDate, DateTime(2026, 9, 25));
+      expect(u.lastActiveAt, isNotNull);
+      expect(u.lastActiveAt!.hour, isNonNegative);
       expect(u.lessonsDone, 4);
     });
 
@@ -140,6 +149,7 @@ void main() {
       expect(u.league, '');
       expect(u.isAdmin, isFalse);
       expect(u.lastStreakDate, isNull);
+      expect(u.lastActiveAt, isNull);
       expect(u.streak, 0);
     });
 
@@ -292,6 +302,401 @@ void main() {
       expect(AdminResetTarget.streak.name, 'streak');
       expect(AdminResetTarget.hearts.name, 'hearts');
       expect(AdminResetTarget.progress.name, 'progress');
+    });
+  });
+
+  group('AdminGrantTarget', () {
+    test('names match the RPC contract', () {
+      expect(AdminGrantTarget.hearts.name, 'hearts');
+      expect(AdminGrantTarget.gems.name, 'gems');
+      expect(AdminGrantTarget.xp.name, 'xp');
+    });
+  });
+
+  group('AdminGrantResult', () {
+    test('parses a full grant payload', () {
+      final r = AdminGrantResult.fromJson(const {
+        'ok': true,
+        'target': 'gems',
+        'applied': 7,
+        'hearts': 3,
+        'gems': 7,
+        'xp': 215,
+      });
+      expect(r.target, AdminGrantTarget.gems);
+      expect(r.applied, 7);
+      expect(r.hearts, 3);
+      expect(r.gems, 7);
+      expect(r.xp, 215);
+    });
+
+    test('unknown target falls back to hearts, missing numbers to 0', () {
+      final r = AdminGrantResult.fromJson(const {'target': 'bogus'});
+      expect(r.target, AdminGrantTarget.hearts);
+      expect(r.applied, 0);
+      expect(r.hearts, 0);
+      expect(r.gems, 0);
+      expect(r.xp, 0);
+    });
+
+    test('parsed applied may be less than requested (hearts cap)', () {
+      final r = AdminGrantResult.fromJson(const {
+        'target': 'hearts',
+        'applied': 4,
+        'hearts': 7,
+        'gems': 0,
+        'xp': 190,
+      });
+      expect(r.applied, 4);
+      expect(r.hearts, 7);
+    });
+  });
+
+  group('AdminErrorGroup', () {
+    test('parses a full grouped error row', () {
+      final g = AdminErrorGroup.fromJson(const {
+        'fingerprint': 'a1b2c3',
+        'count': 2,
+        'users': 1,
+        'latest_at': '2026-09-25T18:17:08.012765+00:00',
+        'message': 'TestError: boom',
+        'stack': '#0 main',
+        'app_version': '1.0.0',
+        'platform': 'android',
+        'device': 'sdk',
+      });
+      expect(g.fingerprint, 'a1b2c3');
+      expect(g.count, 2);
+      expect(g.users, 1);
+      expect(g.message, 'TestError: boom');
+      expect(g.stack, '#0 main');
+      expect(g.appVersion, '1.0.0');
+      expect(g.platform, 'android');
+      expect(g.device, 'sdk');
+      expect(g.latestAt, isNotNull);
+      expect(g.latestAt!.toUtc().year, 2026);
+    });
+
+    test('missing optional fields fall back to defaults', () {
+      final g = AdminErrorGroup.fromJson(const {'count': 5});
+      expect(g.fingerprint, '');
+      expect(g.count, 5);
+      expect(g.users, 0);
+      expect(g.message, '');
+      expect(g.stack, '');
+      expect(g.appVersion, isNull);
+      expect(g.platform, isNull);
+      expect(g.device, isNull);
+      expect(g.latestAt, isNull);
+    });
+
+    test('invalid latest_at string parses as null', () {
+      final g = AdminErrorGroup.fromJson(const {
+        'fingerprint': 'x',
+        'latest_at': 'not-a-date',
+      });
+      expect(g.latestAt, isNull);
+    });
+  });
+
+  group('AdminClientErrorsPayload', () {
+    test('parses total + groups', () {
+      final p = AdminClientErrorsPayload.fromJson(const {
+        'total_events': 3,
+        'groups': [
+          {'fingerprint': 'a', 'count': 2, 'users': 1, 'message': 'm'},
+          {'fingerprint': 'b', 'count': 1, 'users': 1, 'message': 'n'},
+        ],
+      });
+      expect(p.totalEvents, 3);
+      expect(p.groups, hasLength(2));
+      expect(p.groups.first.fingerprint, 'a');
+      expect(p.groups.last.count, 1);
+    });
+
+    test('empty / partial payload tolerated', () {
+      expect(AdminClientErrorsPayload.fromJson(const {}).totalEvents, 0);
+      final p = AdminClientErrorsPayload.fromJson(const {
+        'total_events': 7,
+        'groups': [42, null],
+      });
+      expect(p.totalEvents, 7);
+      expect(p.groups, isEmpty);
+    });
+  });
+
+  group('AdminRetention', () {
+    test('parses a mature cohort row', () {
+      final c = AdminRetentionCohort.fromJson(const {
+        'date': '2026-09-07',
+        'users': 2,
+        'd1': 50,
+        'd7': 0,
+        'd30': 33.3,
+      });
+      expect(c.date, DateTime(2026, 9, 7));
+      expect(c.users, 2);
+      expect(c.d1, 50);
+      expect(c.d7, 0);
+      expect(c.d30, 33.3);
+    });
+
+    test('immature cohort keeps null horizons', () {
+      final c = AdminRetentionCohort.fromJson(const {
+        'date': '2026-09-25',
+        'users': 5,
+        'd1': null,
+        'd7': null,
+        'd30': null,
+      });
+      expect(c.d1, isNull);
+      expect(c.d7, isNull);
+      expect(c.d30, isNull);
+      expect(c.users, 5);
+    });
+
+    test('summary parses pooled rates + eligible counts', () {
+      final s = AdminRetentionSummary.fromJson(const {
+        'd1': 45.5,
+        'd7': 0,
+        'd30': 0,
+        'eligible1': 11,
+        'eligible7': 7,
+        'eligible30': 0,
+        'users': 16,
+        'days': 30,
+      });
+      expect(s.d1, 45.5);
+      expect(s.d7, 0);
+      expect(s.eligible1, 11);
+      expect(s.eligible30, 0);
+      expect(s.users, 16);
+      expect(s.days, 30);
+    });
+
+    test('payload parses summary + cohorts', () {
+      final p = AdminRetentionPayload.fromJson(const {
+        'summary': {'d1': 45.5, 'eligible1': 11},
+        'cohorts': [
+          {'date': '2026-08-27', 'users': 1, 'd1': 100, 'd7': 0, 'd30': null},
+          {
+            'date': '2026-09-25',
+            'users': 5,
+            'd1': null,
+            'd7': null,
+            'd30': null,
+          },
+        ],
+      });
+      expect(p.summary.d1, 45.5);
+      expect(p.summary.eligible1, 11);
+      expect(p.summary.days, 0);
+      expect(p.cohorts, hasLength(2));
+      expect(p.cohorts.first.d1, 100);
+      expect(p.cohorts.last.d1, isNull);
+    });
+
+    test('missing summary / cohorts tolerated', () {
+      final p = AdminRetentionPayload.fromJson(const {});
+      expect(p.summary.users, 0);
+      expect(p.summary.d1, 0);
+      expect(p.cohorts, isEmpty);
+      final p2 = AdminRetentionPayload.fromJson(const {
+        'summary': 'not-a-map',
+        'cohorts': [7],
+      });
+      expect(p2.summary.users, 0);
+      expect(p2.cohorts, isEmpty);
+    });
+  });
+
+  group('AdminLessonStat accuracy', () {
+    test('parses attempts + accuracy when present', () {
+      final l = AdminLessonStat.fromJson({
+        'lesson_index': 0,
+        'title': 'الخلية',
+        'completed_by': 4,
+        'attempts': 7,
+        'accuracy': 28.6,
+      });
+      expect(l.attempts, 7);
+      expect(l.accuracy, 28.6);
+      expect(l.completedBy, 4);
+    });
+
+    test('accuracy is null and attempts 0 without attempts data', () {
+      final l = AdminLessonStat.fromJson({
+        'lesson_index': 1,
+        'title': 'درس',
+        'completed_by': 2,
+        'accuracy': null,
+      });
+      expect(l.attempts, 0);
+      expect(l.accuracy, isNull);
+    });
+  });
+
+  group('AdminQuestionStat', () {
+    final rowJson = <String, dynamic>{
+      'question_id': 'ict_l1_q6',
+      'subject_id': 'ict',
+      'subject_name': 'تكنولوجيا المعلومات والاتصالات',
+      'lesson_index': 0,
+      'type': 'trueFalse',
+      'difficulty': 'easy',
+      'snippet': 'اللوحة الأم تربط مكونات الحاسوب ببعضها.',
+      'attempts': 5,
+      'users': 3,
+      'correct': 0,
+      'wrong': 5,
+      'accuracy': 0.0,
+    };
+
+    test('parses a question row', () {
+      final q = AdminQuestionStat.fromJson(rowJson);
+      expect(q.questionId, 'ict_l1_q6');
+      expect(q.subjectId, 'ict');
+      expect(q.subjectName, 'تكنولوجيا المعلومات والاتصالات');
+      expect(q.lessonIndex, 0);
+      expect(q.type, 'trueFalse');
+      expect(q.difficulty, 'easy');
+      expect(q.attempts, 5);
+      expect(q.users, 3);
+      expect(q.wrong, 5);
+      expect(q.accuracy, 0);
+    });
+
+    test('triage flags: <40% too hard, >95% too easy, in-between none', () {
+      expect(AdminQuestionStat.fromJson(rowJson).isTooHard, isTrue);
+      expect(AdminQuestionStat.fromJson(rowJson).isTooEasy, isFalse);
+
+      final tooEasy = AdminQuestionStat.fromJson({
+        ...rowJson,
+        'correct': 97,
+        'wrong': 3,
+        'accuracy': 97.0,
+      });
+      expect(tooEasy.isTooEasy, isTrue);
+      expect(tooEasy.isTooHard, isFalse);
+
+      final healthy = AdminQuestionStat.fromJson({
+        ...rowJson,
+        'correct': 60,
+        'wrong': 40,
+        'accuracy': 60.0,
+      });
+      expect(healthy.isTooHard, isFalse);
+      expect(healthy.isTooEasy, isFalse);
+    });
+
+    test('missing optional fields fall back to defaults', () {
+      final q = AdminQuestionStat.fromJson(const {'question_id': 'q1'});
+      expect(q.subjectName, '');
+      expect(q.difficulty, isNull);
+      expect(q.attempts, 0);
+      expect(q.accuracy, 0);
+    });
+  });
+
+  group('AdminQuestionStatsPayload', () {
+    test('parses summary + ranked questions', () {
+      final p = AdminQuestionStatsPayload.fromJson({
+        'summary': {
+          'questions_total': 348,
+          'questions_answered': 213,
+          'answers_total': 526,
+          'min_attempts': 3,
+        },
+        'questions': [
+          {
+            'question_id': 'ict_l1_q6',
+            'subject_id': 'ict',
+            'subject_name': 'تكنولوجيا المعلومات والاتصالات',
+            'lesson_index': 0,
+            'type': 'trueFalse',
+            'difficulty': 'easy',
+            'snippet': 'اللوحة الأم…',
+            'attempts': 5,
+            'users': 3,
+            'correct': 0,
+            'wrong': 5,
+            'accuracy': 0.0,
+          },
+        ],
+      });
+      expect(p.questionsTotal, 348);
+      expect(p.questionsAnswered, 213);
+      expect(p.answersTotal, 526);
+      expect(p.minAttempts, 3);
+      expect(p.questions, hasLength(1));
+      expect(p.questions.single.isTooHard, isTrue);
+    });
+
+    test('tolerates empty payload', () {
+      final p = AdminQuestionStatsPayload.fromJson(const {});
+      expect(p.questionsTotal, 0);
+      expect(p.minAttempts, 0);
+      expect(p.questions, isEmpty);
+    });
+  });
+
+  group('AdminPushHealth', () {
+    test('parses coverage, platforms, devices and send log', () {
+      final h = AdminPushHealth.fromJson({
+        'users_total': 21,
+        'tokens_total': 4,
+        'tokens_users': 3,
+        'coverage_pct': 14.3,
+        'platforms': {'android': 4},
+        'last_registered_at': '2026-09-25T16:55:39.115943+00:00',
+        'devices': [
+          {
+            'user_id': 'u1',
+            'display_name': 'modather',
+            'platform': 'android',
+            'updated_at': '2026-09-25T16:55:39.115943+00:00',
+          },
+        ],
+        'log_14d': [
+          {'day': '2026-09-25', 'kind': 'streak', 'sends': 2},
+        ],
+      });
+      expect(h.usersTotal, 21);
+      expect(h.tokensTotal, 4);
+      expect(h.tokensUsers, 3);
+      expect(h.coveragePct, 14.3);
+      expect(h.platforms['android'], 4);
+      expect(h.lastRegisteredAt, isNotNull);
+      expect(h.devices, hasLength(1));
+      expect(h.devices.single.displayName, 'modather');
+      expect(h.devices.single.platform, 'android');
+      expect(h.log14d.single.kind, 'streak');
+      expect(h.log14d.single.sends, 2);
+      expect(h.log14d.single.day.day, 25);
+    });
+
+    test('tolerates empty / partial payload', () {
+      final h = AdminPushHealth.fromJson(const {});
+      expect(h.usersTotal, 0);
+      expect(h.coveragePct, 0);
+      expect(h.platforms, isEmpty);
+      expect(h.lastRegisteredAt, isNull);
+      expect(h.devices, isEmpty);
+      expect(h.log14d, isEmpty);
+    });
+
+    test('device rows tolerate missing display_name', () {
+      final h = AdminPushHealth.fromJson({
+        'devices': [
+          {'user_id': 'u1', 'platform': 'ios'},
+        ],
+      });
+      expect(h.devices.single.displayName, '');
+      expect(h.devices.single.platform, 'ios');
+      expect(
+        h.devices.single.updatedAt,
+        DateTime.fromMillisecondsSinceEpoch(0),
+      );
     });
   });
 }

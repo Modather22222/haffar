@@ -5,6 +5,7 @@ class Subject {
   final String id;
   final String name;
   final String icon;
+  final String? colorHex;
   final int sortOrder;
   final List<Unit> units;
 
@@ -12,6 +13,7 @@ class Subject {
     required this.id,
     required this.name,
     required this.icon,
+    this.colorHex,
     this.sortOrder = 0,
     List<Unit>? units,
   }) : units = units ?? const [];
@@ -21,6 +23,7 @@ class Subject {
         id: map['id'] as String,
         name: map['name'] as String,
         icon: map['icon'] as String,
+        colorHex: map['color_hex'] as String?,
         sortOrder: (map['sort_order'] as int?) ?? 0,
         units: units,
       );

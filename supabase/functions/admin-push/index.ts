@@ -4,9 +4,11 @@
 // this code runs, so we can trust the token payload; we still re-check
 // profiles.is_admin server-side (the in-app button flag is UX only).
 //
-// Body: { body: string, user_id?: string } — omit user_id to broadcast to
-// every registered token. Sends a no-title notification on the same
-// Android channel as streak alerts so it always displays.
+// Body: { body: string, user_id?: string, segment?: "dormant_7d" |
+// "active_7d" } — omit user_id/segment to broadcast to every registered
+// token; user_id wins over segment (target one user's devices).
+// Sends a no-title notification on the same Android channel as streak
+// alerts so it always displays.
 //
 // Secret: FCM_SERVICE_ACCOUNT_JSON (shared with streak-alert).
 
@@ -38,9 +40,12 @@ function decodeSub(jwt: string): string | null {
   }
 }
 
-function b64url(bytes: Uint8Array): string {
+function b64url(bytes: Uint8Array | ArrayBuffer): string {
+  // crypto.subtle.sign resolves to ArrayBuffer on some runtimes, which is
+  // not iterable — normalize before the byte loop.
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
+  for (const b of view) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
@@ -112,7 +117,7 @@ Deno.serve(async (req) => {
     const sub = decodeSub(jwt);
     if (!sub) return new Response("unauthorized", { status: 401 });
 
-    let payload: { body?: unknown; user_id?: unknown };
+    let payload: { body?: unknown; user_id?: unknown; segment?: unknown };
     try {
       payload = await req.json();
     } catch {
@@ -123,6 +128,19 @@ Deno.serve(async (req) => {
     const targetUserId =
       typeof payload.user_id === "string" && payload.user_id.length > 0
         ? payload.user_id
+        : null;
+    const segmentRaw = payload.segment;
+    if (
+      segmentRaw !== undefined &&
+      segmentRaw !== null &&
+      segmentRaw !== "dormant_7d" &&
+      segmentRaw !== "active_7d"
+    ) {
+      return new Response("invalid segment", { status: 400 });
+    }
+    const segment =
+      segmentRaw === "dormant_7d" || segmentRaw === "active_7d"
+        ? segmentRaw
         : null;
 
     const saRaw = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
@@ -145,8 +163,44 @@ Deno.serve(async (req) => {
       return new Response("forbidden", { status: 403 });
     }
 
+    // Resolve audience: user_id > segment > all tokens.
     let tokenQuery = supabase.from("push_tokens").select("token, user_id");
-    if (targetUserId) tokenQuery = tokenQuery.eq("user_id", targetUserId);
+    if (targetUserId) {
+      tokenQuery = tokenQuery.eq("user_id", targetUserId);
+    } else if (segment) {
+      const cutoff = new Date(Date.now() - 7 * 86_400_000).toISOString();
+      const profileIds: string[] = [];
+      if (segment === "dormant_7d") {
+        // Never engaged OR last engaged before the 7-day cutoff. Two simple
+        // queries instead of .or() so ISO timestamps need no value quoting.
+        const [never, stale] = await Promise.all([
+          supabase.from("profiles").select("id").is("last_active_at", null),
+          supabase.from("profiles").select("id").lt("last_active_at", cutoff),
+        ]);
+        if (never.error) throw never.error;
+        if (stale.error) throw stale.error;
+        profileIds.push(
+          ...(never.data ?? []).map((r) => r.id),
+          ...(stale.data ?? []).map((r) => r.id),
+        );
+      } else {
+        const recent = await supabase
+          .from("profiles")
+          .select("id")
+          .gte("last_active_at", cutoff);
+        if (recent.error) throw recent.error;
+        profileIds.push(...(recent.data ?? []).map((r) => r.id));
+      }
+      if (profileIds.length === 0) {
+        return Response.json({
+          sent: 0,
+          dropped: 0,
+          targets: 0,
+          segment,
+        });
+      }
+      tokenQuery = tokenQuery.in("user_id", profileIds);
+    }
     const { data: tokens, error: tokenErr } = await tokenQuery;
     if (tokenErr) throw tokenErr;
     const rows = tokens ?? [];
@@ -191,7 +245,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    return Response.json({ sent, dropped, targets: rows.length });
+    return Response.json({
+      sent,
+      dropped,
+      targets: rows.length,
+      ...(segment ? { segment } : {}),
+    });
   } catch (e) {
     console.error("admin-push failed", e);
     return new Response("internal error", { status: 500 });

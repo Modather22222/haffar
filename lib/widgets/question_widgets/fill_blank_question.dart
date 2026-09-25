@@ -5,6 +5,7 @@ import 'question_base.dart';
 class FillBlankQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final String? info;
   final List<String> correctWords;
   final int xpReward;
@@ -18,6 +19,7 @@ class FillBlankQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     this.info,
     required this.correctWords,
     required this.xpReward,
@@ -65,6 +67,7 @@ class _FillBlankQuestionState extends State<FillBlankQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       info: widget.info,
       xpReward: widget.xpReward,
       onBack: widget.onBack,

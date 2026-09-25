@@ -10,6 +10,7 @@ import 'question_base.dart';
 class MatchingQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final List<String> leftItems;
   final List<String> rightItems;
   final int xpReward;
@@ -23,6 +24,7 @@ class MatchingQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     required this.leftItems,
     required this.rightItems,
     required this.xpReward,
@@ -142,6 +144,7 @@ class _MatchingQuestionState extends State<MatchingQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,

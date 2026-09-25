@@ -1,6 +1,7 @@
 import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
+import '../markdown_text.dart';
 import '../xp_icon.dart';
 
 class QuestionHeader extends StatelessWidget {
@@ -112,7 +113,7 @@ class HintCard extends StatelessWidget {
           Icon(icon, size: 20, color: HaffarColors.primaryLight),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: MarkdownText(
               text,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',
@@ -148,7 +149,7 @@ class InfoCard extends StatelessWidget {
           Icon(Icons.info_outline, size: 20, color: HaffarColors.primary),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: MarkdownText(
               text,
               style: const TextStyle(
                 fontFamily: 'PlusJakartaSans',

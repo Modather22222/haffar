@@ -1,11 +1,13 @@
 import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
+import '../markdown_text.dart';
 import 'question_base.dart';
 
 class DefinitionQuestion extends StatefulWidget {
   final String pathTitle;
   final String term;
   final String questionText;
+  final String? imageUrl;
   final List<String> options;
   final int correctIndex;
   final int xpReward;
@@ -20,6 +22,7 @@ class DefinitionQuestion extends StatefulWidget {
     required this.pathTitle,
     required this.term,
     required this.questionText,
+    this.imageUrl,
     required this.options,
     required this.correctIndex,
     required this.xpReward,
@@ -48,6 +51,7 @@ class _DefinitionQuestionState extends State<DefinitionQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       xpReward: widget.xpReward,
       onBack: widget.onBack,
       onSkip: widget.onSkip,
@@ -64,15 +68,15 @@ class _DefinitionQuestionState extends State<DefinitionQuestion> {
                 width: 2,
               ),
             ),
-            child: Text(
+            child: MarkdownText(
               widget.term,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'BeVietnamPro',
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 color: HaffarColors.primaryDark,
               ),
-              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 20),

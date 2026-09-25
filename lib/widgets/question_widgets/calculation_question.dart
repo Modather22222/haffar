@@ -7,6 +7,7 @@ import 'question_base.dart';
 class CalculationQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
+  final String? imageUrl;
   final String? hint;
   final String? formula;
   final List<String> options;
@@ -23,6 +24,7 @@ class CalculationQuestion extends StatefulWidget {
     super.key,
     required this.pathTitle,
     required this.questionText,
+    this.imageUrl,
     this.hint,
     this.formula,
     required this.options,
@@ -110,6 +112,7 @@ class _CalculationQuestionState extends State<CalculationQuestion> {
     return QuestionBase(
       pathTitle: widget.pathTitle,
       questionText: widget.questionText,
+      imageUrl: widget.imageUrl,
       hint: widget.hint,
       xpReward: widget.xpReward,
       onBack: widget.onBack,

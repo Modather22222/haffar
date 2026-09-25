@@ -10,6 +10,7 @@ import '../models/question.dart';
 import '../models/unit.dart';
 import '../services/lesson_unlocks.dart';
 import '../utils/routes.dart';
+import '../widgets/markdown_text.dart';
 import '../widgets/mascot.dart';
 
 class LessonDetailScreen extends StatefulWidget {
@@ -108,15 +109,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
                 color: HaffarColors.outline.withValues(alpha: 0.2),
               ),
             ),
-            child: Text(
-              _lesson?.summary ?? '',
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 14,
-                color: HaffarColors.textSecondary,
-                height: 1.6,
-              ),
-            ),
+            child: MarkdownText(_lesson?.summary ?? ''),
           ),
           const SizedBox(height: 20),
           const Text(
@@ -141,7 +134,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: MarkdownText(
                       point,
                       style: const TextStyle(
                         fontFamily: 'PlusJakartaSans',

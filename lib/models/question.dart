@@ -31,6 +31,7 @@ class Question {
   final int xpReward;
   final String? imageUrl; // for chart/data questions
   final int sortOrder;
+  final String difficulty; // easy | medium | hard
 
   const Question({
     required this.id,
@@ -47,6 +48,7 @@ class Question {
     this.xpReward = 5,
     this.imageUrl,
     this.sortOrder = 0,
+    this.difficulty = 'medium',
   });
 
   static QuestionType _typeFromString(String value) =>
@@ -71,6 +73,7 @@ class Question {
         .cast<String>(),
     xpReward: (map['xp_reward'] as int?) ?? 5,
     imageUrl: map['image_url'] as String?,
+    difficulty: (map['difficulty'] as String?) ?? 'medium',
   );
 
   /// Returns the correct answer text for display in feedback
