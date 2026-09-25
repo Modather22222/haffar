@@ -38,14 +38,15 @@ class ProgressRepository {
     return rows.map((r) => '${r['subject_id']}:${r['lesson_index']}').toList();
   }
 
+  /// Writes one completion through the validated RPC — the DB rejects
+  /// unknown lessons, and direct inserts on the table are revoked.
   Future<void> saveCompletedLesson(String subjectId, int lessonIndex) async {
     final uid = _uid;
     if (uid == null) return;
-    await _client.from('user_lesson_progress').upsert({
-      'user_id': uid,
-      'subject_id': subjectId,
-      'lesson_index': lessonIndex,
-    });
+    await _client.rpc(
+      'complete_lesson',
+      params: {'p_subject_id': subjectId, 'p_lesson_index': lessonIndex},
+    );
   }
 
   /// Completed unit-exercise keys in "subjectId:unitIndex" form.

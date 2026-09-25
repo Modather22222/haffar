@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../design_system/colors.dart';
 import '../providers/content_provider.dart';
 import '../providers/progress_provider.dart';
-import '../models/lesson.dart';
+import '../design_system/colors.dart';
 import '../models/unit.dart';
-import '../services/lesson_unlocks.dart';
 import '../utils/routes.dart';
 import '../widgets/lesson_node.dart';
 
@@ -95,12 +93,7 @@ class LessonPathScreen extends StatelessWidget {
                       lessonIndex,
                     );
                     final isCurrent = lessonIndex == completedLessons;
-                    final isLocked = !LessonUnlocks.isLessonUnlocked(
-                      lookup: _ContentLookup(content),
-                      isCompleted: progress.isSubjectLessonCompleted,
-                      subjectId: subjectId,
-                      lessonIndex: lessonIndex,
-                    );
+                    // All lessons are open — the user picks the order.
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 32),
                       child: Center(
@@ -108,13 +101,11 @@ class LessonPathScreen extends StatelessWidget {
                           label: 'درس ${Unit.toArabicNumeral(lessonIndex + 1)}',
                           isCompleted: isCompleted,
                           isCurrent: isCurrent,
-                          isLocked: isLocked,
-                          onTap: isLocked
-                              ? null
-                              : () => context.push(
-                                  '${Routes.lessonDetail}'
-                                  '?subject=$subjectId&lesson=$lessonIndex',
-                                ),
+                          isLocked: false,
+                          onTap: () => context.push(
+                            '${Routes.lessonDetail}'
+                            '?subject=$subjectId&lesson=$lessonIndex',
+                          ),
                         ),
                       ),
                     );
@@ -127,12 +118,4 @@ class LessonPathScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ContentLookup implements LessonUnlockLookup {
-  final ContentProvider content;
-  const _ContentLookup(this.content);
-
-  @override
-  List<Lesson> lessonsOf(String subjectId) => content.lessonsOf(subjectId);
 }

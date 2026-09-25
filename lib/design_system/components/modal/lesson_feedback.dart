@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../colors.dart';
 import '../buttons/button_general_primary.dart';
 
 // Feedback sheets — ported from the Duolingo Duo modals, adapted to
 // Haffar (BeVietnamPro typography, brand imagery removed per request).
 // No mascot/images inside the sheets.
 
-// ── Correct: Haffar orange banner + white-check circle ──────────────────
-const Color _correctBg = Color(0xFFFFE9D6);
-const Color _correctHeading = HaffarColors.primary;
-const Color _correctFlagColor = HaffarColors.primaryDark;
+// ── Correct: green banner + white-check circle (Duo-spec greens) ─────────
+const Color _correctBg = Color(0xFFEDFBE9);
+const Color _correctHeading = Color(0xFF50A130);
+const Color _correctButtonBg = Color(0xFF50A130);
+const Color _correctFlagColor = Color(0xFF0E8A00);
 
 // ── Wrong: Duo red banner + white-cross circle ───────────────────────────
 const Color _wrongBg = Color(0xFFFBCECE);
@@ -100,12 +100,13 @@ class _CorrectContinueButton extends StatelessWidget {
     return HaffarPrimaryButton(
       label: 'متابعة',
       fullWidth: true,
+      backgroundColor: _correctButtonBg,
       onPressed: onTap,
     );
   }
 }
 
-/// Orange circle with white checkmark.
+/// Green circle with white checkmark.
 class _CircleTickIcon extends StatelessWidget {
   const _CircleTickIcon();
 
@@ -125,7 +126,7 @@ class _CircleTickPainter extends CustomPainter {
     final s = size.width / 24.0;
     canvas.save();
     canvas.scale(s);
-    final circle = Paint()..color = HaffarColors.primary;
+    final circle = Paint()..color = _correctButtonBg;
     canvas.drawCircle(const Offset(12, 12), 12, circle);
     final strokePaint = Paint()
       ..color = Colors.white

@@ -116,31 +116,6 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: HaffarColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.favorite, size: 22, color: HaffarColors.primary),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'كل محاولة ليها 5 قلوب خاصة — كل غلط هيخسرك قلب، لو خلصوا ترجع وتبدأ من جديد',
-                        style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
-                          fontSize: 14,
-                          height: 1.6,
-                          color: HaffarColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
               Row(
                 children: [
                   _statCard(

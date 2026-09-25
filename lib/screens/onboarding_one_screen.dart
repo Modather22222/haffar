@@ -40,7 +40,7 @@ class OnboardingOneScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'استكشف عالم المعرفة',
+                    'احفر طريقك نحو النجاح',
                     style: TextStyle(
                       fontFamily: HaffarTextStyles.fontFamily,
                       fontSize: 20,

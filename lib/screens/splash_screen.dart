@@ -138,7 +138,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'استكشف عالم المعرفة',
+                  'احفر طريقك نحو النجاح',
                   style: TextStyle(
                     fontFamily: HaffarTextStyles.fontFamily,
                     fontSize: 18,

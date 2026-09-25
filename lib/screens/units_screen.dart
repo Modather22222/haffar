@@ -4,11 +4,9 @@ import 'package:provider/provider.dart';
 import '../providers/content_provider.dart';
 import '../providers/progress_provider.dart';
 import '../design_system/colors.dart';
-import '../models/lesson.dart';
 import '../models/subject.dart';
 import '../models/unit.dart';
 import '../utils/routes.dart';
-import '../services/lesson_unlocks.dart';
 
 /// Units screen — shows units for a subject, each containing lessons
 class UnitsScreen extends StatelessWidget {
@@ -25,7 +23,6 @@ class UnitsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = context.watch<ContentProvider>();
     final progress = context.watch<ProgressProvider>();
-    final unlockLookup = _ContentLookup(content);
     final completedCount = progress.subjectCompletedCount(subjectId);
 
     return Scaffold(
@@ -84,9 +81,6 @@ class UnitsScreen extends StatelessWidget {
           itemBuilder: (context, unitIndex) {
             final unit = subject.units[unitIndex];
             final unitLessons = List.generate(3, (i) => unitIndex * 3 + i);
-            final isUnlocked = unitLessons.any(
-              (l) => _isLessonUnlocked(progress, unlockLookup, subjectId, l),
-            );
             final isCompleted = unitLessons.every(
               (l) => progress.isSubjectLessonCompleted(subjectId, l),
             );
@@ -112,11 +106,9 @@ class UnitsScreen extends StatelessWidget {
                 children: [
                   // Unit header
                   InkWell(
-                    onTap: isUnlocked
-                        ? () => context.push(
-                            '${Routes.lessonPath}?subject=$subjectId&unit=$unitIndex',
-                          )
-                        : null,
+                    onTap: () => context.push(
+                      '${Routes.lessonPath}?subject=$subjectId&unit=$unitIndex',
+                    ),
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(16),
                     ),
@@ -127,20 +119,12 @@ class UnitsScreen extends StatelessWidget {
                           Container(
                             width: 48,
                             height: 48,
-                            decoration: BoxDecoration(
-                              color: isCompleted
-                                  ? HaffarColors.primary
-                                  : isUnlocked
-                                  ? HaffarColors.primary
-                                  : HaffarColors.surfaceHigh,
+                            decoration: const BoxDecoration(
+                              color: HaffarColors.primary,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              isCompleted
-                                  ? Icons.check
-                                  : isUnlocked
-                                  ? Icons.book
-                                  : Icons.lock,
+                              isCompleted ? Icons.check : Icons.book,
                               color: Colors.white,
                               size: 24,
                             ),
@@ -159,52 +143,38 @@ class UnitsScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
+                                const Text(
                                   '٣ دروس',
                                   style: TextStyle(
                                     fontFamily: 'PlusJakartaSans',
                                     fontSize: 13,
-                                    color: isUnlocked
-                                        ? HaffarColors.outline
-                                        : HaffarColors.textSecondary,
+                                    color: HaffarColors.outline,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Icon(
-                            isUnlocked
-                                ? Icons.arrow_forward_ios
-                                : Icons.lock_outline,
+                          const Icon(
+                            Icons.arrow_forward_ios,
                             size: 16,
-                            color: isUnlocked
-                                ? HaffarColors.primary
-                                : HaffarColors.textSecondary,
+                            color: HaffarColors.primary,
                           ),
                         ],
                       ),
                     ),
                   ),
-                  // Lessons list
-                  if (isUnlocked) ...[
+                  // Lessons list — all open, the user picks the order
+                  ...[
                     const Divider(height: 1),
                     ...unitLessons.map((lessonIndex) {
                       final isLessonCompleted = progress
                           .isSubjectLessonCompleted(subjectId, lessonIndex);
                       final isLessonCurrent = lessonIndex == completedCount;
                       return InkWell(
-                        onTap:
-                            _isLessonUnlocked(
-                              progress,
-                              unlockLookup,
-                              subjectId,
-                              lessonIndex,
-                            )
-                            ? () => context.push(
-                                '${Routes.lessonDetail}'
-                                '?subject=$subjectId&lesson=$lessonIndex',
-                              )
-                            : null,
+                        onTap: () => context.push(
+                          '${Routes.lessonDetail}'
+                          '?subject=$subjectId&lesson=$lessonIndex',
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -226,14 +196,7 @@ class UnitsScreen extends StatelessWidget {
                                 child: Icon(
                                   isLessonCompleted
                                       ? Icons.check
-                                      : _iconForLesson(
-                                          progress,
-                                          content,
-                                          unlockLookup,
-                                          subjectId,
-                                          lessonIndex,
-                                          isLessonCurrent,
-                                        ),
+                                      : Icons.play_arrow,
                                   color: Colors.white,
                                   size: 16,
                                 ),
@@ -257,7 +220,7 @@ class UnitsScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                   ],
                   // Unit exercise — unlocks after all lessons of the unit are done
-                  if (isUnlocked) ...[
+                  ...[
                     const Divider(height: 1),
                     Builder(
                       builder: (_) {
@@ -353,20 +316,6 @@ class UnitsScreen extends StatelessWidget {
     );
   }
 
-  bool _isLessonUnlocked(
-    ProgressProvider progress,
-    _ContentLookup lookup,
-    String subjectId,
-    int lessonIndex,
-  ) {
-    return LessonUnlocks.isLessonUnlocked(
-      lookup: lookup,
-      isCompleted: progress.isSubjectLessonCompleted,
-      subjectId: subjectId,
-      lessonIndex: lessonIndex,
-    );
-  }
-
   double _progress(
     ProgressProvider progress,
     ContentProvider content,
@@ -386,42 +335,4 @@ class UnitsScreen extends StatelessWidget {
     if (total == 0) return 0;
     return ((progress.subjectCompletedCount(sid) / total) * 100).round();
   }
-
-  IconData _iconForLesson(
-    ProgressProvider progress,
-    ContentProvider content,
-    _ContentLookup lookup,
-    String subjectId,
-    int lessonIndex,
-    bool isCurrent,
-  ) {
-    if (!_isLessonUnlocked(progress, lookup, subjectId, lessonIndex)) {
-      return Icons.lock;
-    }
-    if (isCurrent) return Icons.play_arrow;
-    if (_isFirstInUnit(content, subjectId, lessonIndex)) {
-      return Icons.play_arrow;
-    }
-    return Icons.check;
-  }
-
-  bool _isFirstInUnit(
-    ContentProvider content,
-    String subjectId,
-    int lessonIndex,
-  ) {
-    final lessons = content.lessonsOf(subjectId);
-    final unitLessons = lessons.where((l) => l.index == lessonIndex).toList();
-    if (unitLessons.isEmpty) return false;
-    final unitIdx = unitLessons.first.unitIndex;
-    return !lessons.any((l) => l.unitIndex == unitIdx && l.index < lessonIndex);
-  }
-}
-
-class _ContentLookup implements LessonUnlockLookup {
-  final ContentProvider content;
-  const _ContentLookup(this.content);
-
-  @override
-  List<Lesson> lessonsOf(String subjectId) => content.lessonsOf(subjectId);
 }

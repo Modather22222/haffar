@@ -256,6 +256,9 @@ class _HomeTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 150,
+        // Locked height: every card is identical no matter how long the
+        // subject name is (16+72+8+36+10+48+16 padding + 2px border = 208).
+        height: 208,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: HaffarColors.primary,
@@ -275,17 +278,30 @@ class _HomeTab extends StatelessWidget {
                 ),
               )
             else
-              Text(s.icon, style: const TextStyle(fontSize: 36)),
-            const SizedBox(height: 8),
-            Text(
-              s.name,
-              style: const TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+              SizedBox(
+                height: 72,
+                child: Center(
+                  child: Text(s.icon, style: const TextStyle(fontSize: 36)),
+                ),
               ),
-              textAlign: TextAlign.center,
+            const SizedBox(height: 8),
+            // Fixed 2-line slot + auto-shrunk font: the name is never cut,
+            // it only gets slightly smaller when it is too long.
+            SizedBox(
+              height: 36,
+              child: Center(
+                child: Text(
+                  s.name,
+                  style: TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: _fitSubjectTitle(s.name, 118),
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             SizedBox(
@@ -318,6 +334,28 @@ class _HomeTab extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Largest title size in [14…11] where [name] wraps to at most 2 lines
+  /// inside [maxWidth] — long names get slightly smaller instead of cut.
+  double _fitSubjectTitle(String name, double maxWidth) {
+    for (var size = 14.0; size >= 11; size -= 1) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: name,
+          style: TextStyle(
+            fontFamily: 'BeVietnamPro',
+            fontSize: size,
+            height: 1.25,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        maxLines: 2,
+        textDirection: TextDirection.rtl,
+      )..layout(maxWidth: maxWidth);
+      if (!tp.didExceedMaxLines) return size;
+    }
+    return 11;
   }
 
   Widget _statChip(Widget icon, String value) {

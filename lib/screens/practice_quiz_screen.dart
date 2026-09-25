@@ -200,10 +200,13 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
     }
     if (widget.attemptKind == 'unit') {
       progress.completeUnitExercise(widget.subjectId, widget.attemptRefIndex);
-    } else {
+    } else if (widget.attemptKind == 'lesson') {
+      // Lessons count only here (finished quiz) or via the "لقد فهمت"
+      // button on the lesson screen — never from review attempts.
       progress.completeSubjectLesson(widget.subjectId, widget.attemptRefIndex);
     }
-    // Streak bumps only for lesson/unit completions (not review attempts).
+    // Streak from a finished lesson quiz, a finished unit exam, or the
+    // "لقد فهمت" button (never from review attempts).
     if (widget.attemptKind == 'lesson' || widget.attemptKind == 'unit') {
       economy.updateStreakOnCompletion();
     }

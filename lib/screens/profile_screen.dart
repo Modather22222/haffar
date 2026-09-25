@@ -182,7 +182,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         key: 'first',
         asset: 'assets/banners/first_banner.jpg',
         title: 'حفّار',
-        desc: 'حفر طريقك نحو النجاح',
+        desc: 'احفر طريقك نحو النجاح',
         unlocked: _bannerUnlocks['first'] ?? true,
       ),
       _Banner(
