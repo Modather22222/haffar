@@ -48,6 +48,8 @@ import 'screens/onboarding_thirteen_screen.dart';
 import 'screens/onboarding_fourteen_screen.dart';
 import 'screens/onboarding_fifteen_screen.dart';
 import 'screens/sign_in_screen.dart';
+import 'screens/admin/admin_shell_screen.dart';
+import 'screens/admin/admin_user_detail_screen.dart';
 import 'models/question.dart';
 import 'models/subject.dart';
 import 'utils/routes.dart';
@@ -428,6 +430,14 @@ final GoRouter router = GoRouter(
       builder: (_, _) => const AchievementsScreen(),
     ),
     GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+    GoRoute(path: Routes.admin, builder: (_, _) => const AdminShellScreen()),
+    GoRoute(
+      path: Routes.adminUser,
+      builder: (_, state) {
+        final uid = state.uri.queryParameters['id'] ?? '';
+        return AdminUserDetailScreen(userId: uid);
+      },
+    ),
     GoRoute(
       path: Routes.signingIn,
       builder: (_, _) => const SignInLoadingScreen(),

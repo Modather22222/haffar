@@ -36,6 +36,8 @@ abstract class Routes {
   static const onboardingFourteen = '/onboarding/fourteen';
   static const onboardingFifteen = '/onboarding/fifteen';
   static const signIn = '/sign-in';
+  static const admin = '/admin';
+  static const adminUser = '/admin/user';
 }
 
 /// Typed arguments for the /question route

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../services/admin_repository.dart';
 import '../services/auth_service.dart';
 import '../services/hearts_repository.dart';
 import '../services/progress_repository.dart';
@@ -44,6 +45,10 @@ class SessionProvider extends ChangeNotifier {
 
   bool remoteSyncEnabled = false;
 
+  /// Whether the signed-in user is an admin (own profiles.is_admin row).
+  /// Display gating only — every admin RPC/function re-checks server-side.
+  bool isAdmin = false;
+
   /// Last hydration failure message (Arabic), if any. Cleared on success.
   String? lastInitError;
 
@@ -60,6 +65,7 @@ class SessionProvider extends ChangeNotifier {
     AppLog.info('auth event=${event.name} session=${state.session != null}');
     if (event == AuthChangeEvent.signedOut) {
       remoteSyncEnabled = false;
+      isAdmin = false;
       notifyListeners();
       return;
     }
@@ -92,8 +98,18 @@ class SessionProvider extends ChangeNotifier {
       progress.attachRepo(progressRepo, signedIn: signedIn);
       if (!signedIn) {
         lastInitError = null;
+        isAdmin = false;
         notifyListeners();
         return;
+      }
+
+      // Own-row is_admin read (RLS allows it). Kept out of the main try so a
+      // failure here can't fail hydration — the flag simply stays false.
+      try {
+        isAdmin = await AdminRepository(client).fetchIsAdmin();
+      } catch (e, st) {
+        isAdmin = false;
+        AppLog.error('fetchIsAdmin FAILED', e, st);
       }
 
       // Flush local outbox (failed XP/streak/lesson writes) BEFORE reading
@@ -156,6 +172,7 @@ class SessionProvider extends ChangeNotifier {
       return false;
     } finally {
       remoteSyncEnabled = false;
+      isAdmin = false;
       lastInitError = null;
       notifyListeners();
     }

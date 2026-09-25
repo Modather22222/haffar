@@ -2,6 +2,7 @@ import '../design_system/colors.dart';
 import '../widgets/profile_view.dart';
 import '../providers/economy_provider.dart';
 import '../providers/progress_provider.dart';
+import '../providers/session_provider.dart';
 import '../services/banner_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/app_toast.dart';
@@ -127,7 +128,81 @@ class _ProfileBodyState extends State<_ProfileBody> {
         bannerAsset:
             BannerRepository.assets[economy.selectedBanner] ??
             _selectedBannerAsset(economy.streak, progress.completedLessons),
-        trailing: (ctx) => _achievementsSection(ctx),
+        trailing: (ctx) => _trailingSection(ctx),
+      ),
+    );
+  }
+
+  /// Admin-only dashboard entry first, then achievements/badges for everyone.
+  Widget _trailingSection(BuildContext context) {
+    final isAdmin = context.watch<SessionProvider>().isAdmin;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isAdmin) _adminTile(context),
+        _achievementsSection(context),
+      ],
+    );
+  }
+
+  /// "لوحة التحكم" tile — visible only when SessionProvider.isAdmin is true
+  /// (the server re-checks on every admin RPC regardless of this flag).
+  Widget _adminTile(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Material(
+        color: HaffarColors.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push(Routes.admin),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: HaffarColors.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.dashboard_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'لوحة التحكم',
+                        style: TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: HaffarColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'إحصائيات التطبيق وإدارة المستخدمين',
+                        style: TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontSize: 12,
+                          color: HaffarColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_left, color: HaffarColors.grey3),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
