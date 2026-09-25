@@ -65,7 +65,7 @@ class _OnboardingEightScreenState extends State<OnboardingEightScreen> {
                       const Expanded(
                         child: HaffarSpeechBubble(
                           tailPosition: BubbleTailPosition.bottomRight,
-                          message: 'اخر سؤال اسم مدرستك شنو؟',
+                          message: 'اسم مدرستك شنو؟',
                         ),
                       ),
                     ],

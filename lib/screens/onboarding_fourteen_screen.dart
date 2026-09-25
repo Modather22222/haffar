@@ -123,7 +123,7 @@ class _OnboardingFourteenScreenState extends State<OnboardingFourteenScreen> {
                     const SizedBox(height: 24),
                     const HaffarSpeechBubble(
                       message:
-                          'بعتنا لك رابط تأكيد على إيميلك — افتحه عشان نفعّل حسابك',
+                          'رسلنا رابط تأكيد على إيميلك — افتحو عشان نفعّل حسابك',
                       tailPosition: BubbleTailPosition.center,
                     ),
                     const SizedBox(height: 32),

@@ -40,7 +40,7 @@ class OnboardingThreeScreen extends StatelessWidget {
                                 ),
                               ),
                               TextSpan(
-                                text: '5 أسئلة سريعة',
+                                text: '9 أسئلة سريعة',
                                 style: TextStyle(
                                   fontFamily: 'DIN2014Rounded',
                                   fontSize: 18,
