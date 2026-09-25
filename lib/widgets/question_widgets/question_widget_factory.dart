@@ -27,7 +27,29 @@ class QuestionWidgetFactory {
     bool locked = false,
   }) {
     final pathTitle = customTitle ?? '$subjectName - درس $lessonNumber';
+    return KeyedSubtree(
+      key: ValueKey('${question.id}|${question.text}'),
+      child: _build(
+        question: question,
+        pathTitle: pathTitle,
+        onBack: onBack,
+        onSkip: onSkip,
+        onNext: onNext,
+        onSubmitAnswer: onSubmitAnswer,
+        locked: locked,
+      ),
+    );
+  }
 
+  static Widget _build({
+    required Question question,
+    required String pathTitle,
+    required VoidCallback onBack,
+    required VoidCallback onSkip,
+    required VoidCallback onNext,
+    required void Function(bool, String?) onSubmitAnswer,
+    required bool locked,
+  }) {
     switch (question.type) {
       case QuestionType.multipleChoice:
         return MultipleChoiceQuestion(

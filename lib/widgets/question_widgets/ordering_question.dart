@@ -45,6 +45,8 @@ class _OrderingQuestionState extends State<OrderingQuestion> {
 
   void _move(int from, int to) {
     if (widget.locked) return;
+    if (from == to) return;
+    if (to > from) to -= 1;
     if (to < 0 || to >= _items.length) return;
     setState(() {
       final item = _items.removeAt(from);
