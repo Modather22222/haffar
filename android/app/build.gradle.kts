@@ -79,13 +79,20 @@ android {
     buildTypes {
         release {
             // Fail fast only when a release build is actually requested.
+            val releaseRequested = gradle.startParameter.taskNames
+                .any { it.contains("Release", ignoreCase = true) }
             signingConfig = signingConfigs.findByName("release")
-                ?: throw GradleException(
-                    "Release signing requires a keystore. Put it at " +
-                        "android/key/release.keystore and set android/key.properties " +
-                        "(storeFile/storePassword/keyAlias/keyPassword), or set " +
-                        "KEYSTORE_PATH (CI)."
-                )
+                ?: run {
+                    if (releaseRequested) {
+                        throw GradleException(
+                            "Release signing requires a keystore. Put it at " +
+                                "android/key/release.keystore and set android/key.properties " +
+                                "(storeFile/storePassword/keyAlias/keyPassword), or set " +
+                                "KEYSTORE_PATH (CI)."
+                        )
+                    }
+                    signingConfigs.getByName("debug")
+                }
             // R8 shrink + obfuscate for smaller, harder-to-reverse APKs.
             isMinifyEnabled = true
             isShrinkResources = true
