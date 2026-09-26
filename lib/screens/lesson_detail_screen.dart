@@ -95,6 +95,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
   }
 
   Widget _buildSummaryTab() {
+    final keyPoints = (_lesson?.keyPoints ?? const <String>[])
+        .where((p) => p.trim().isNotEmpty)
+        .toList(growable: false);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -144,42 +147,44 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
             ),
             child: _summaryBody(),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'نقاط مهمة',
-            style: TextStyle(
-              fontFamily: 'BeVietnamPro',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...(_lesson?.keyPoints ?? const <String>[]).map(
-            (point) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    size: 20,
-                    color: HaffarColors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: MarkdownText(
-                      point,
-                      style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 14,
-                        color: HaffarColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
+          if (keyPoints.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const Text(
+              'نقاط مهمة',
+              style: TextStyle(
+                fontFamily: 'BeVietnamPro',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
-          ),
+            const SizedBox(height: 12),
+            ...keyPoints.map(
+              (point) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      size: 20,
+                      color: HaffarColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: MarkdownText(
+                        point,
+                        style: const TextStyle(
+                          fontFamily: 'PlusJakartaSans',
+                          fontSize: 14,
+                          color: HaffarColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             height: 52,
