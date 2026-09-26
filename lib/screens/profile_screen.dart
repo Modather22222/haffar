@@ -4,6 +4,7 @@ import '../providers/economy_provider.dart';
 import '../providers/progress_provider.dart';
 import '../providers/session_provider.dart';
 import '../services/banner_repository.dart';
+import '../services/xp_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/app_toast.dart';
 import '../utils/routes.dart';
@@ -81,10 +82,26 @@ class _ProfileBodyState extends State<_ProfileBody> {
   /// threshold fallback in _bannerGrid applies.
   Map<String, bool> _bannerUnlocks = {};
 
+  /// This week's XP (weekly_xp_summary RPC) — null until the fetch lands.
+  /// The tab is rebuilt (fresh initState) on every visit, so the value is
+  /// re-fetched each time the profile screen opens.
+  int? _weekXp;
+
   @override
   void initState() {
     super.initState();
     _loadBannerUnlocks();
+    _loadWeekXp();
+  }
+
+  Future<void> _loadWeekXp() async {
+    try {
+      final weekXp = await XpRepository(Supabase.instance.client).getWeeklyXp();
+      if (mounted) setState(() => _weekXp = weekXp);
+    } catch (e, st) {
+      AppLog.warn('weekly_xp_summary failed: $e');
+      AppLog.error('getWeeklyXp', e, st);
+    }
   }
 
   Future<void> _loadBannerUnlocks() async {
@@ -125,6 +142,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         xp: economy.xp,
         streak: economy.streak,
         completedLessons: progress.completedLessons,
+        weekXp: _weekXp,
         bannerAsset:
             BannerRepository.assets[economy.selectedBanner] ??
             _selectedBannerAsset(economy.streak, progress.completedLessons),
