@@ -49,6 +49,27 @@ void main() {
       });
       expect(withoutPosition.position, 0);
     });
+
+    test('published defaults to true and parses explicit draft', () {
+      final published = Lesson.fromMap({
+        'id': 'c',
+        'subject_id': 'math',
+        'unit_index': 0,
+        'lesson_index': 1,
+        'title': 't',
+      });
+      expect(published.published, isTrue);
+
+      final draft = Lesson.fromMap({
+        'id': 'd',
+        'subject_id': 'math',
+        'unit_index': 0,
+        'lesson_index': 2,
+        'title': 't',
+        'published': false,
+      });
+      expect(draft.published, isFalse);
+    });
   });
 
   group('Unit.lessonsCountLabel', () {

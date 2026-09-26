@@ -30,10 +30,12 @@ class ContentRepository {
     }).toList();
   }
 
-  Future<List<Lesson>> fetchLessons() async {
-    final rows = await _client
-        .from('lessons')
-        .select()
+  /// Lessons in display order. Students must pass [publishedOnly] so draft
+  /// lessons (incomplete content, not yet saved by the admin) stay hidden;
+  /// the admin editor loads everything to manage drafts.
+  Future<List<Lesson>> fetchLessons({bool publishedOnly = false}) async {
+    final query = _client.from('lessons').select();
+    final rows = await (publishedOnly ? query.eq('published', true) : query)
         .order('unit_index')
         .order('position');
     return rows.map(Lesson.fromMap).toList();

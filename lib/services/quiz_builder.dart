@@ -28,6 +28,9 @@ class QuizBuilder {
     int count = 3,
     Random? random,
   }) {
+    // Empty pools are valid (a lesson may have no questions yet): clamp
+    // would throw ArgumentError(lowerLimit > upperLimit) below.
+    if (pool.isEmpty) return const [];
     final rnd = random ?? Random();
     final seen = _lastAttemptIds[key] ?? const <String>{};
     final fresh = pool.where((q) => !seen.contains(q.id)).toList();

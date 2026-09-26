@@ -125,9 +125,14 @@ Future<bool> showConfirmDialog(
 }
 
 /// Success or error snackbar with admin typography.
-void editorSnack(BuildContext context, {String? success, Object? error}) {
+void editorSnack(
+  BuildContext context, {
+  String? success,
+  Object? error,
+  String? errorMessage,
+}) {
   if (!context.mounted) return;
-  final message = success ?? _saveErrorText(error);
+  final message = success ?? errorMessage ?? _saveErrorText(error);
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(
@@ -140,7 +145,7 @@ void editorSnack(BuildContext context, {String? success, Object? error}) {
             color: Colors.white,
           ),
         ),
-        backgroundColor: error != null
+        backgroundColor: (error != null || errorMessage != null)
             ? HaffarColors.error
             : HaffarColors.primaryDark,
       ),
@@ -151,6 +156,10 @@ void editorSnack(BuildContext context, {String? success, Object? error}) {
 String _saveErrorText(Object? error) {
   final s = error?.toString() ?? '';
   if (s.contains('not authorized')) return 'غير مصرح — هذه العملية للأدمن فقط';
+  // Server-side validation detail (admin_publish_lessons) — show it verbatim.
+  if (s.contains('lessons incomplete:')) {
+    return s.split('lessons incomplete:').last.trim();
+  }
   if (s.contains('row-level security')) {
     return 'غير مصرح بتعديل هذا المحتوى';
   }

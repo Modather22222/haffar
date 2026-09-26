@@ -66,6 +66,34 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
   String get _lessonTitle =>
       _lesson?.title ?? 'درس ${Unit.toArabicNumeral(_lessonOrdinal)}';
 
+  /// Lesson content body with a graceful placeholder instead of an empty
+  /// box: the lesson may be missing (hidden draft / removed) or published
+  /// without content yet.
+  Widget _summaryBody() {
+    final lesson = _lesson;
+    const style = TextStyle(
+      fontFamily: 'BeVietnamPro',
+      fontSize: 14,
+      height: 1.6,
+      color: HaffarColors.textSecondary,
+    );
+    if (lesson == null) {
+      return const Text(
+        'هذا الدرس غير متاح حالياً',
+        textAlign: TextAlign.center,
+        style: style,
+      );
+    }
+    if (lesson.summary.trim().isEmpty) {
+      return const Text(
+        'سيظهر محتوى الدرس هنا قريباً',
+        textAlign: TextAlign.center,
+        style: style,
+      );
+    }
+    return MarkdownText(lesson.summary);
+  }
+
   Widget _buildSummaryTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -114,7 +142,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
                 color: HaffarColors.outline.withValues(alpha: 0.2),
               ),
             ),
-            child: MarkdownText(_lesson?.summary ?? ''),
+            child: _summaryBody(),
           ),
           const SizedBox(height: 20),
           const Text(

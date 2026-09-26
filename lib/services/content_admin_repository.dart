@@ -101,8 +101,10 @@ class ContentAdminRepository {
         .eq('id', lessonId);
   }
 
-  /// Appends a lesson shell to an existing unit (admin_create_lesson RPC).
-  /// Returns the created `{id, lesson_index, position}` object.
+  /// Appends a DRAFT lesson shell to an existing unit (admin_create_lesson
+  /// RPC). The lesson stays invisible to students until published via
+  /// [publishLessons]. Returns the created
+  /// `{id, lesson_index, position}` object.
   Future<Map<String, dynamic>> createLesson(
     String subjectId,
     int unitIndex, {
@@ -117,6 +119,19 @@ class ContentAdminRepository {
       },
     );
     return Map<String, dynamic>.from(result as Map);
+  }
+
+  /// Publishes every draft lesson of the subject
+  /// (admin_publish_lessons RPC). The server rejects the whole call if any
+  /// draft is missing required content (title or summary). Returns how many
+  /// lessons became visible to students.
+  Future<int> publishLessons(String subjectId) async {
+    final result = await _client.rpc(
+      'admin_publish_lessons',
+      params: {'p_subject_id': subjectId},
+    );
+    final map = Map<String, dynamic>.from(result as Map);
+    return (map['published'] as num?)?.toInt() ?? 0;
   }
 
   /// Deletes a lesson with its questions and every user's progress rows for

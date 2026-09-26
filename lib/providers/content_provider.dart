@@ -82,7 +82,7 @@ class ContentProvider extends ChangeNotifier {
       final repo = ContentRepository(Supabase.instance.client);
       final results = await Future.wait([
         repo.fetchSubjects(),
-        repo.fetchLessons(),
+        repo.fetchLessons(publishedOnly: true),
         repo.fetchQuestions(),
       ]);
       _subjects = results[0] as List<Subject>;

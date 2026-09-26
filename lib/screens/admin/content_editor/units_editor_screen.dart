@@ -38,6 +38,7 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
   /// Lessons of this subject grouped by unit_index, ordered by position.
   Map<int, List<Lesson>> _lessonsByUnit = {};
   bool _loading = true;
+  bool _saving = false;
   Object? _error;
 
   @override
@@ -107,9 +108,12 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
     try {
       await _admin.createUnit(widget.subjectId, title);
       await _load();
-      await _refreshStudentContent();
       if (!mounted) return;
-      editorSnack(context, success: 'تمت إضافة الوحدة مع 3 دروس فارغة');
+      editorSnack(
+        context,
+        success:
+            'تمت إضافة الوحدة مع 3 دروس كمسودات — أكمل محتواها ثم اضغط حفظ',
+      );
     } catch (e) {
       if (!mounted) return;
       editorSnack(context, error: e);
@@ -164,12 +168,52 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
     try {
       await _admin.createLesson(widget.subjectId, unit.index);
       await _load();
-      await _refreshStudentContent();
       if (!mounted) return;
-      editorSnack(context, success: 'تمت إضافة الدرس');
+      editorSnack(
+        context,
+        success: 'تمت إضافة الدرس كمسودة — لن يظهر للطلاب قبل الحفظ',
+      );
     } catch (e) {
       if (!mounted) return;
       editorSnack(context, error: e);
+    }
+  }
+
+  /// Publishes all draft lessons of this subject after validating required
+  /// content client-side; the server re-validates and rejects atomically
+  /// (`lessons incomplete: ...`) if anything is still missing.
+  Future<void> _publish() async {
+    final incomplete = <String>[
+      for (final list in _lessonsByUnit.values)
+        for (final lesson in list)
+          if (!lesson.published &&
+              (lesson.title.trim().isEmpty || lesson.summary.trim().isEmpty))
+            (lesson.title.trim().isEmpty ? '(بلا عنوان)' : lesson.title.trim()),
+    ];
+    if (incomplete.isNotEmpty) {
+      editorSnack(
+        context,
+        errorMessage: 'أكمل محتوى هذه الدروس أولاً: ${incomplete.join(' | ')}',
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final count = await _admin.publishLessons(widget.subjectId);
+      await _load();
+      await _refreshStudentContent();
+      if (!mounted) return;
+      editorSnack(
+        context,
+        success: count > 0
+            ? 'تم حفظ الدروس وظهرت للطلاب ($count)'
+            : 'لا توجد دروس جديدة للنشر',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -309,6 +353,28 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
         color: HaffarColors.textPrimary,
       ),
     ),
+    actions: [
+      Padding(
+        padding: const EdgeInsetsDirectional.only(end: 12),
+        child: TextButton(
+          onPressed: _saving ? null : _publish,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text(
+                  'حفظ',
+                  style: TextStyle(
+                    fontFamily: kAdminFont,
+                    fontWeight: FontWeight.w800,
+                    color: HaffarColors.primaryDark,
+                  ),
+                ),
+        ),
+      ),
+    ],
     backgroundColor: HaffarColors.white,
     surfaceTintColor: Colors.white,
     elevation: 0,
@@ -447,6 +513,25 @@ class _UnitEditorCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (!lesson.published) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: kChartOrange.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'مسودة',
+                  style: TextStyle(
+                    fontFamily: kAdminFont,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: kChartOrange,
+                  ),
+                ),
+              ),
+            ],
             IconButton(
               tooltip: 'سؤال داخل الدرس',
               visualDensity: VisualDensity.compact,

@@ -347,12 +347,20 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
       editorSnack(context, error: ArgumentError(titleError));
       return;
     }
+    final summary = markdownFromDocument(_summaryController.document);
+    if (summary.trim().isEmpty) {
+      editorSnack(
+        context,
+        errorMessage: 'محتوى الدرس مطلوب — اكتب ملخص الدرس قبل الحفظ',
+      );
+      return;
+    }
     setState(() => _saving = true);
     try {
       await _admin.updateLesson(
         lessonId: lesson.id,
         title: _titleController.text.trim(),
-        summary: markdownFromDocument(_summaryController.document),
+        summary: summary,
         keyPoints: _pointControllers
             .map((c) => c.text.trim())
             .where((t) => t.isNotEmpty)
@@ -360,7 +368,12 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
       );
       await _refreshStudentContent();
       if (!mounted) return;
-      editorSnack(context, success: 'تم حفظ الدرس');
+      editorSnack(
+        context,
+        success: lesson.published
+            ? 'تم حفظ الدرس'
+            : 'تم حفظ محتوى المسودة — اضغط حفظ في شاشة الوحدات لإظهاره للطلاب',
+      );
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -409,8 +422,28 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (!(_lesson?.published ?? true)) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: HaffarColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'مسودة — لن يظهر هذا الدرس للطلاب قبل إكمال المحتوى '
+                  'والضغط على حفظ في شاشة الوحدات.',
+                  style: TextStyle(
+                    fontFamily: kAdminFont,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: HaffarColors.primaryDark,
+                  ),
+                ),
+              ),
+            ],
             AdminSectionCard(
-              title: 'عنوان الدرس',
+              title: 'عنوان الدرس *',
               child: TextField(
                 controller: _titleController,
                 style: const TextStyle(fontFamily: kAdminFont, fontSize: 14),
@@ -430,7 +463,7 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
             ),
             const SizedBox(height: 12),
             AdminSectionCard(
-              title: 'محتوى الدرس (تنسيق غني)',
+              title: 'محتوى الدرس (تنسيق غني) *',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

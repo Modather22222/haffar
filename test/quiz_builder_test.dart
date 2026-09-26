@@ -53,6 +53,18 @@ void main() {
       expect(quiz.length, 1);
     });
 
+    test('empty pool returns an empty quiz instead of throwing', () {
+      // Regression: `count.clamp(1, 0)` used to throw ArgumentError and
+      // crashed the lesson screen when a lesson had no questions yet.
+      final quiz = QuizBuilder.build(
+        'empty',
+        const [],
+        count: 10,
+        random: Random(1),
+      );
+      expect(quiz, isEmpty);
+    });
+
     test('shuffles options and keeps correctIndex aligned', () {
       final original = _q(
         'mc',

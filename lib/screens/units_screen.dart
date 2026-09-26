@@ -24,6 +24,12 @@ class UnitsScreen extends StatelessWidget {
     final content = context.watch<ContentProvider>();
     final progress = context.watch<ProgressProvider>();
 
+    // Units without any (published) lesson stay hidden — e.g. brand-new
+    // units whose lessons are still drafts.
+    final visibleUnits = subject.units
+        .where((u) => content.lessonsOfUnit(subjectId, u.index).isNotEmpty)
+        .toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -76,9 +82,9 @@ class UnitsScreen extends StatelessWidget {
       body: SafeArea(
         child: ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: subject.units.length,
+          itemCount: visibleUnits.length,
           itemBuilder: (context, i) {
-            final unit = subject.units[i];
+            final unit = visibleUnits[i];
             final unitLessons = content.lessonsOfUnit(subjectId, unit.index);
             final isCompleted =
                 unitLessons.isNotEmpty &&
