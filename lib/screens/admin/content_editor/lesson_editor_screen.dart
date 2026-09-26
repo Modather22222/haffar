@@ -12,6 +12,7 @@ import '../../../services/content_admin_repository.dart';
 import '../../../utils/content_validators.dart';
 import '../../../utils/rich_content.dart';
 import '../../../widgets/markdown_text.dart';
+import '../../../widgets/quill_embed_builders.dart';
 import '../admin_widgets.dart';
 import 'content_block_sheet.dart';
 import 'editor_dialogs.dart';
@@ -272,7 +273,9 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
           QuillEditorImageEmbedBuilder(
             config: const QuillEditorImageEmbedConfig(),
           ),
+          const QuillTableEmbedBuilder(),
         ],
+        unknownEmbedBuilder: const QuillUnknownEmbedBuilder(),
       ),
     );
   }
