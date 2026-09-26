@@ -1,5 +1,6 @@
 import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'question_base.dart';
 
 class OrderingQuestion extends StatefulWidget {
@@ -50,6 +51,8 @@ class _OrderingQuestionState extends State<OrderingQuestion> {
     if (from == to) return;
     if (to > from) to -= 1;
     if (to < 0 || to >= _items.length) return;
+    // Stronger tick when the dragged item actually lands in a new slot.
+    HapticFeedback.mediumImpact();
     setState(() {
       final item = _items.removeAt(from);
       _items.insert(to, item);

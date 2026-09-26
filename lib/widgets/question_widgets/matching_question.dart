@@ -1,6 +1,7 @@
 import '../../design_system/colors.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'question_base.dart';
 
 /// سؤال: المزاوجة — two columns; picking one item from each side draws a
@@ -77,6 +78,7 @@ class _MatchingQuestionState extends State<MatchingQuestion> {
 
   void _tapItem({required bool isLeftColumn, required int idx}) {
     if (widget.locked) return;
+    var paired = false;
     setState(() {
       if (isLeftColumn) {
         _selectedLeft = _selectedLeft == idx ? null : idx;
@@ -91,8 +93,15 @@ class _MatchingQuestionState extends State<MatchingQuestion> {
         _connections[_selectedLeft!] = _selectedRight!;
         _selectedLeft = null;
         _selectedRight = null;
+        paired = true;
       }
     });
+    // Light tick per tap; a stronger one when the pair snaps together.
+    if (paired) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.lightImpact();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureLines());
   }
 

@@ -1,5 +1,6 @@
 import '../../design_system/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import 'question_base.dart';
 
 class MultipleChoiceQuestion extends StatefulWidget {
@@ -72,7 +73,10 @@ class _MultipleChoiceQuestionState extends State<MultipleChoiceQuestion> {
                     idx != widget.correctIndex,
                 onTap: widget.locked
                     ? null
-                    : () => setState(() => _selected = idx),
+                    : () {
+                        HapticFeedback.lightImpact();
+                        setState(() => _selected = idx);
+                      },
               ),
             );
           }),

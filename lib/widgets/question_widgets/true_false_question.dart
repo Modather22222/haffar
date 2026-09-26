@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 import '../../design_system/colors.dart';
 import 'question_base.dart';
 
@@ -37,6 +38,7 @@ class _TrueFalseQuestionState extends State<TrueFalseQuestion> {
 
   void _select(bool value) {
     if (_selected != null || widget.locked) return;
+    HapticFeedback.lightImpact();
     final correct = value == widget.correctAnswer;
     _selected = value;
     widget.onSubmitAnswer(correct, correct ? 'صواب' : 'خطأ');
