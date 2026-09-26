@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/content_provider.dart';
-import '../providers/economy_provider.dart';
-import '../providers/progress_provider.dart';
 import '../models/lesson.dart';
 import '../models/question.dart';
 import '../models/unit.dart';
@@ -200,58 +198,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 52,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: HaffarColors.primaryDark,
-                side: const BorderSide(color: HaffarColors.primary, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              onPressed: _markLessonUnderstood,
-              icon: const Icon(Icons.check_circle_outline, size: 22),
-              label: const Text(
-                'لقد فهمت الدرس',
-                style: TextStyle(
-                  fontFamily: 'BeVietnamPro',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
-  }
-
-  void _markLessonUnderstood() {
-    context.read<ProgressProvider>().completeSubjectLesson(
-      widget.subjectId,
-      widget.lessonIndex,
-    );
-    // Manual completion still counts toward the daily streak.
-    context.read<EconomyProvider>().updateStreakOnCompletion();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'رائع! تم فتح ما يلي من رحلتك',
-          style: TextStyle(
-            fontFamily: 'BeVietnamPro',
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        backgroundColor: HaffarColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) context.pop();
-    });
   }
 
   Widget _buildQuizTab() {

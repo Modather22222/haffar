@@ -29,7 +29,7 @@ const Mascot(pose: MascotPose.jump, size: 64)
 | Excited Wave | `MascotPose.wave` | `wave.png` | Excited waving | Welcome screen, lesson start, greetings |
 | Sad | `MascotPose.sad` | `sad.png` | Crying, teary-eyed | Wrong-answer feedback (empathetic tone), hearts depleted |
 | Studying | `MascotPose.study` | `study.png` | Taking notes with pencil | Lesson summaries, tips, "نقاط مهمة" sections |
-| In Love | `MascotPose.love` | `love.png` | In love with floating hearts | Shop, favorites, rewards, "لقد فهمت الدرس" praise |
+| In Love | `MascotPose.love` | `love.png` | In love with floating hearts | Shop, favorites, rewards |
 
 ---
 
