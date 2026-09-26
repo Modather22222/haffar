@@ -13,6 +13,7 @@ import '../../../utils/content_validators.dart';
 import '../../../utils/rich_content.dart';
 import '../../../widgets/markdown_text.dart';
 import '../admin_widgets.dart';
+import 'content_block_sheet.dart';
 import 'editor_dialogs.dart';
 
 /// Rich-text lesson editor: title, Quill summary (stored as GitHub-Flavored
@@ -104,35 +105,71 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
     }
   }
 
-  Future<void> _pickAndUploadImage() async {
-    if (_uploading) return;
+  /// Opens the gallery, uploads the picked image, and returns its public URL
+  /// (null when cancelled or failed — failures already snack).
+  Future<String?> _pickAndUpload() async {
+    if (_uploading) return null;
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 1600,
       imageQuality: 85,
     );
-    if (picked == null || !mounted) return;
+    if (picked == null || !mounted) return null;
     setState(() => _uploading = true);
     try {
       final bytes = await picked.readAsBytes();
-      final url = await _admin.uploadImage(
+      return await _admin.uploadImage(
         bytes: bytes,
         mimeType: _mimeTypeFor(picked.path),
       );
-      final base = _summaryController.selection.isValid
-          ? _summaryController.selection.baseOffset
-          : _summaryController.document.length - 1;
-      final index = base < 0 ? 0 : base;
-      _summaryController.replaceText(index, 0, BlockEmbed.image(url), null);
-      if (mounted) {
-        editorSnack(context, success: 'تم إدراج الصورة');
-      }
     } catch (e) {
       if (mounted) editorSnack(context, error: e);
+      return null;
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final url = await _pickAndUpload();
+    if (url == null || !mounted) return;
+    final base = _summaryController.selection.isValid
+        ? _summaryController.selection.baseOffset
+        : _summaryController.document.length - 1;
+    final index = base < 0 ? 0 : base;
+    _summaryController.replaceText(index, 0, BlockEmbed.image(url), null);
+    if (mounted) {
+      editorSnack(context, success: 'تم إدراج الصورة');
+    }
+  }
+
+  /// Insert-block flow: capture the caret, open the block sheet, then insert
+  /// the picked markdown at the captured offset (image blocks upload first
+  /// and insert an image line plus a caption paragraph).
+  Future<void> _insertBlock() async {
+    final controller = _summaryController;
+    final fallback = controller.document.length - 1;
+    final base = controller.selection.isValid
+        ? controller.selection.end
+        : fallback;
+    FocusManager.instance.primaryFocus?.unfocus();
+    final block = await showContentBlockSheet(context);
+    if (block == null || !mounted) return;
+    if (block.requiresImage) {
+      final url = await _pickAndUpload();
+      if (url == null || !mounted) return;
+      insertMarkdownAt(
+        controller,
+        '![صورة الدرس]($url)\n\n**شرح الصورة:** اكتب شرح الصورة هنا',
+        at: base,
+      );
+      editorSnack(context, success: 'تم إدراج الصورة مع سطر الشرح');
+      return;
+    }
+    final markdown = block.markdown;
+    if (markdown == null || markdown.trim().isEmpty) return;
+    insertMarkdownAt(controller, markdown, at: base);
   }
 
   static String _mimeTypeFor(String path) {
@@ -193,12 +230,32 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
   Widget _editorToolbar() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: QuillSimpleToolbar(
-        controller: _summaryController,
-        config: const QuillSimpleToolbarConfig(
-          showAlignmentButtons: true,
-          showDirection: true,
-        ),
+      child: Row(
+        children: [
+          TextButton.icon(
+            onPressed: _insertBlock,
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            icon: const Icon(Icons.add_box_outlined, size: 17),
+            label: const Text(
+              'إدراج قسم',
+              style: TextStyle(
+                fontFamily: kAdminFont,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          QuillSimpleToolbar(
+            controller: _summaryController,
+            config: const QuillSimpleToolbarConfig(
+              showAlignmentButtons: true,
+              showDirection: true,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -333,6 +390,38 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
         ],
       ),
     );
+  }
+
+  /// Saves the current lesson content as a reusable template (Phase 3):
+  /// the row lands in `content_templates` (admin-only RLS) and becomes
+  /// available in the add-lesson picker and the insert-block sheet.
+  Future<void> _saveAsTemplate() async {
+    final summary = markdownFromDocument(_summaryController.document);
+    if (summary.trim().isEmpty) {
+      editorSnack(context, errorMessage: 'لا يوجد محتوى لحفظه كقالب');
+      return;
+    }
+    final name = await showTextPromptDialog(
+      context,
+      title: 'حفظ كقالب',
+      label: 'اسم القالب',
+      initial: _titleController.text.trim(),
+      max: 120,
+    );
+    if (name == null || !mounted) return;
+    final title = name.trim();
+    if (title.isEmpty) {
+      editorSnack(context, errorMessage: 'اسم القالب مطلوب');
+      return;
+    }
+    try {
+      await _admin.createContentTemplate(title: title, markdown: summary);
+      if (!mounted) return;
+      editorSnack(context, success: 'تم حفظ القالب "$title"');
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    }
   }
 
   Future<void> _save() async {
@@ -603,6 +692,18 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
     elevation: 0,
     scrolledUnderElevation: 0,
     actions: [
+      TextButton(
+        onPressed: _saving ? null : _saveAsTemplate,
+        child: const Text(
+          'حفظ كقالب',
+          style: TextStyle(
+            fontFamily: kAdminFont,
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+            color: HaffarColors.grey1,
+          ),
+        ),
+      ),
       TextButton(
         onPressed: _saving ? null : _save,
         child: _saving

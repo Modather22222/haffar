@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:haffar/utils/rich_content.dart';
@@ -134,6 +136,97 @@ void main() {
     test('documentFromMarkdown on empty input builds an empty document', () {
       final doc = documentFromMarkdown('');
       expect(markdownFromDocument(doc), '');
+    });
+  });
+
+  group('insertMarkdownAt', () {
+    QuillController makeController(String source) => QuillController(
+      document: documentFromMarkdown(source),
+      selection: const TextSelection.collapsed(offset: 0),
+    );
+
+    List<String> lines(QuillController c) => markdownFromDocument(
+      c.document,
+    ).split('\n').where((l) => l.trim().isNotEmpty).toList();
+
+    test('inserts a paragraph into an empty document and moves the caret', () {
+      final c = makeController('');
+      insertMarkdownAt(c, 'نص جديد');
+      expect(markdownFromDocument(c.document), 'نص جديد');
+      expect(c.selection.isValid, isTrue);
+      expect(c.selection.end, c.document.length - 1);
+    });
+
+    test('splits the line when inserting mid-text', () {
+      final c = makeController('abc');
+      insertMarkdownAt(c, 'نص', at: 1);
+      final mdLines = lines(c);
+      expect(mdLines.first, 'a');
+      expect(mdLines, contains('نص'));
+      expect(mdLines.last, 'bc');
+    });
+
+    test('inserting at the end of the content starts a new line', () {
+      final c = makeController('abc');
+      insertMarkdownAt(c, 'نص', at: 3);
+      final md = markdownFromDocument(c.document);
+      expect(md, startsWith('abc'));
+      expect(md, contains('نص'));
+      expect(md, isNot(contains('abcنص')));
+    });
+
+    test('inserting at a line start keeps surrounding lines intact', () {
+      final c = makeController('abc\ndef');
+      insertMarkdownAt(c, 'نص', at: 4);
+      expect(lines(c), ['abc', 'نص', 'def']);
+    });
+
+    test('uses the current selection when at is omitted', () {
+      final c = makeController('abc');
+      c.updateSelection(
+        const TextSelection.collapsed(offset: 1),
+        ChangeSource.local,
+      );
+      insertMarkdownAt(c, 'نص');
+      final mdLines = lines(c);
+      expect(mdLines.first, 'a');
+      expect(mdLines.last, 'bc');
+    });
+
+    test('stale out-of-range offsets are clamped into the document', () {
+      final c = makeController('abc');
+      insertMarkdownAt(c, 'نص', at: 999);
+      expect(markdownFromDocument(c.document), contains('نص'));
+      expect(c.selection.end, c.document.length - 1);
+    });
+
+    test('multi-block markdown keeps headers and paragraphs', () {
+      final c = makeController('');
+      insertMarkdownAt(c, '## عنوان\n\nفقرة تجريبية');
+      final md = markdownFromDocument(c.document);
+      expect(md, contains('## عنوان'));
+      expect(md, contains('فقرة تجريبية'));
+      expect(lines(c).length, 2);
+    });
+
+    test('image embeds do not glue the next block onto their line', () {
+      final c = makeController('');
+      insertMarkdownAt(c, '![](https://example.com/a.png)');
+      insertMarkdownAt(c, 'نص بعد الصورة');
+      final md = markdownFromDocument(c.document);
+      expect(md, contains('![](https://example.com/a.png)'));
+      expect(md, contains('نص بعد الصورة'));
+      expect(md, isNot(contains('.pngنص')));
+      expect(lines(c).length, 2);
+    });
+
+    test('empty markdown is a no-op', () {
+      final c = makeController('abc');
+      final before = markdownFromDocument(c.document);
+      final selectionBefore = c.selection;
+      insertMarkdownAt(c, '   ');
+      expect(markdownFromDocument(c.document), before);
+      expect(c.selection, selectionBefore);
     });
   });
 }

@@ -89,16 +89,21 @@ class ContentAdminRepository {
 
   // ----------------------------------------------------------------- lessons
 
+  /// Updates the provided fields of a lesson; omitted arguments stay
+  /// untouched (used by the editor save and by template seeding).
   Future<void> updateLesson({
     required String lessonId,
-    required String title,
-    required String summary,
-    required List<String> keyPoints,
+    String? title,
+    String? summary,
+    List<String>? keyPoints,
   }) async {
-    await _client
-        .from('lessons')
-        .update({'title': title, 'summary': summary, 'key_points': keyPoints})
-        .eq('id', lessonId);
+    final patch = <String, dynamic>{
+      'title': ?title,
+      'summary': ?summary,
+      'key_points': ?keyPoints,
+    };
+    if (patch.isEmpty) return;
+    await _client.from('lessons').update(patch).eq('id', lessonId);
   }
 
   /// Appends a DRAFT lesson shell to an existing unit (admin_create_lesson
@@ -214,6 +219,35 @@ class ContentAdminRepository {
         'p_ids': ids,
       },
     );
+  }
+
+  // ------------------------------------------------------- content templates
+
+  /// Saved reusable templates, newest first (admin-only through RLS).
+  Future<List<Map<String, dynamic>>> fetchContentTemplates() async {
+    final rows = await _client
+        .from('content_templates')
+        .select('id, title, description, markdown, created_at')
+        .order('created_at', ascending: false);
+    return [for (final row in rows) Map<String, dynamic>.from(row)];
+  }
+
+  /// Saves the given markdown as a named template (lesson editor's
+  /// حفظ كقالب). [description] is optional and shown in pickers.
+  Future<void> createContentTemplate({
+    required String title,
+    String description = '',
+    required String markdown,
+  }) async {
+    await _client.from('content_templates').insert({
+      'title': title,
+      'description': description,
+      'markdown': markdown,
+    });
+  }
+
+  Future<void> deleteContentTemplate(String id) async {
+    await _client.from('content_templates').delete().eq('id', id);
   }
 
   // ----------------------------------------------------------------- images

@@ -12,6 +12,7 @@ import '../../../services/content_repository.dart';
 import '../../../utils/routes.dart';
 import '../admin_widgets.dart';
 import 'editor_dialogs.dart';
+import 'lesson_template_sheet.dart';
 
 /// Units + lessons management for one subject: create/delete units, add,
 /// remove, and reorder lessons inside a unit, and edit lesson titles.
@@ -164,14 +165,27 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
     }
   }
 
+  /// Adds a draft lesson to [unit]: the template picker runs first (cancel
+  /// creates nothing), then the lesson shell is created and non-blank
+  /// templates seed its `summary`.
   Future<void> _addLesson(Unit unit) async {
+    final template = await showLessonTemplateSheet(context);
+    if (template == null || !mounted) return;
     try {
-      await _admin.createLesson(widget.subjectId, unit.index);
+      final created = await _admin.createLesson(widget.subjectId, unit.index);
+      if (!template.isBlank) {
+        await _admin.updateLesson(
+          lessonId: created['id'] as String,
+          summary: template.markdown,
+        );
+      }
       await _load();
       if (!mounted) return;
       editorSnack(
         context,
-        success: 'تمت إضافة الدرس كمسودة — لن يظهر للطلاب قبل الحفظ',
+        success: template.isBlank
+            ? 'تمت إضافة الدرس كمسودة — لن يظهر للطلاب قبل الحفظ'
+            : 'تمت إضافة الدرس بالقالب "${template.title}" كمسودة',
       );
     } catch (e) {
       if (!mounted) return;
