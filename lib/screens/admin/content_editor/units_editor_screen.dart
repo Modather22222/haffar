@@ -13,12 +13,13 @@ import '../../../utils/routes.dart';
 import '../admin_widgets.dart';
 import 'editor_dialogs.dart';
 
-/// Units + lessons management for one subject: rename/create/delete units
-/// (structure rules live in SECURITY DEFINER RPCs), edit lesson titles and
-/// swap lesson positions inside a unit. Route: /admin/content/editor/units
+/// Units + lessons management for one subject: create/delete units, add,
+/// remove, and reorder lessons inside a unit, and edit lesson titles.
+/// Route: /admin/content/editor/units
 ///
-/// The student app hard-assumes unit i owns lessons 3i..3i+2, so only the
-/// LAST unit is deletable and swaps stay inside a unit.
+/// Lessons are dynamic: a unit holds any number of them, `lesson_index` is a
+/// stable identity (progress keys), and `position` is the only thing that
+/// changes when lessons move. Structure rules live in SECURITY DEFINER RPCs.
 class ContentUnitsScreen extends StatefulWidget {
   final String subjectId;
 
@@ -33,7 +34,9 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
   late final ContentAdminRepository _admin;
   String _subjectName = '';
   List<Unit> _units = const [];
-  Map<int, Lesson> _lessonsByIndex = {};
+
+  /// Lessons of this subject grouped by unit_index, ordered by position.
+  Map<int, List<Lesson>> _lessonsByUnit = {};
   bool _loading = true;
   Object? _error;
 
@@ -58,15 +61,19 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
       if (subject.isEmpty) throw StateError('المادة غير موجودة');
       final resolved = subject.first;
       final units = List<Unit>.of(resolved.units);
-      final lessonMap = <int, Lesson>{
-        for (final l in lessons.where((l) => l.subjectId == widget.subjectId))
-          l.index: l,
-      };
+      final byUnit = <int, List<Lesson>>{};
+      for (final lesson in lessons) {
+        if (lesson.subjectId != widget.subjectId) continue;
+        byUnit.putIfAbsent(lesson.unitIndex, () => []).add(lesson);
+      }
+      for (final list in byUnit.values) {
+        list.sort((a, b) => a.position.compareTo(b.position));
+      }
       if (!mounted) return;
       setState(() {
         _subjectName = resolved.name;
         _units = units;
-        _lessonsByIndex = lessonMap;
+        _lessonsByUnit = byUnit;
         _loading = false;
       });
     } catch (e) {
@@ -77,6 +84,8 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
       });
     }
   }
+
+  List<Lesson> _lessonsOf(Unit unit) => _lessonsByUnit[unit.index] ?? const [];
 
   Future<void> _refreshStudentContent() async {
     if (!mounted) return;
@@ -129,20 +138,14 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
   }
 
   Future<void> _deleteUnit(Unit unit) async {
-    final isLast = _units.isNotEmpty && unit.index == _units.last.index;
-    if (!isLast) {
-      editorSnack(
-        context,
-        error: 'يمكن حذف آخر وحدة فقط — حذف وحدة في الوسط يكسر ترقيم الدروس',
-      );
-      return;
-    }
+    final lessonCount = _lessonsOf(unit).length;
     final ok = await showConfirmDialog(
       context,
       title: 'حذف الوحدة',
       message:
-          'سيتم حذف الوحدة "${unit.title}" ودروسها الثلاثة وجميع أسئلتها '
-          'نهائياً. هذا لا يمكن التراجع عنه.',
+          'سيتم حذف الوحدة "${unit.title}" و${Unit.lessonsCountLabel(lessonCount)} '
+          'وجميع أسئلتها وتمريناتها وتقدم الطلاب فيها نهائياً. '
+          'هذا لا يمكن التراجع عنه.',
     );
     if (!ok || !mounted) return;
     try {
@@ -151,6 +154,40 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
       await _refreshStudentContent();
       if (!mounted) return;
       editorSnack(context, success: 'تم حذف الوحدة');
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    }
+  }
+
+  Future<void> _addLesson(Unit unit) async {
+    try {
+      await _admin.createLesson(widget.subjectId, unit.index);
+      await _load();
+      await _refreshStudentContent();
+      if (!mounted) return;
+      editorSnack(context, success: 'تمت إضافة الدرس');
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    }
+  }
+
+  Future<void> _deleteLesson(Lesson lesson) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'حذف الدرس',
+      message:
+          'سيتم حذف الدرس "${lesson.title}" مع جميع أسئلته وتقدم الطلاب فيه '
+          'نهائياً. هذا لا يمكن التراجع عنه.',
+    );
+    if (!ok || !mounted) return;
+    try {
+      await _admin.deleteLesson(widget.subjectId, lesson.index);
+      await _load();
+      await _refreshStudentContent();
+      if (!mounted) return;
+      editorSnack(context, success: 'تم حذف الدرس');
     } catch (e) {
       if (!mounted) return;
       editorSnack(context, error: e);
@@ -183,13 +220,13 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
     }
   }
 
-  Future<void> _swapLessons(int from, int to) async {
+  Future<void> _moveLesson(Lesson lesson, int delta) async {
     try {
-      await _admin.swapLessons(widget.subjectId, from, to);
+      await _admin.moveLesson(widget.subjectId, lesson.index, delta);
       await _load();
       await _refreshStudentContent();
       if (!mounted) return;
-      editorSnack(context, success: 'تم تبديل الدرسرين');
+      editorSnack(context, success: 'تم تحريك الدرس');
     } catch (e) {
       if (!mounted) return;
       editorSnack(context, error: e);
@@ -237,24 +274,22 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
               child: _UnitEditorCard(
                 unit: unit,
                 unitNumber: i,
-                lessons: List.generate(3, (k) {
-                  final globalIndex = unit.index * 3 + k;
-                  return _lessonsByIndex[globalIndex];
-                }),
-                canDelete: unit.index == _units.last.index,
+                lessons: _lessonsOf(unit),
                 onRenameUnit: () => _renameUnit(unit),
                 onDeleteUnit: () => _deleteUnit(unit),
+                onAddLesson: () => _addLesson(unit),
+                onDeleteLesson: _deleteLesson,
                 onRenameLesson: _renameLesson,
-                onSwapLessons: _swapLessons,
+                onMoveLesson: _moveLesson,
                 onOpenLesson: (lesson) => context.push(
                   '${Routes.adminContentLesson}'
                   '?id=${lesson.id}&subject=${widget.subjectId}',
                 ),
-                onOpenQuestions: (lesson) => context.push(
+                onOpenQuestions: (lesson, number) => context.push(
                   '${Routes.adminContentQuestions}'
                   '?subject=${widget.subjectId}'
                   '&index=${lesson.index}'
-                  '&number=${lesson.index + 1}',
+                  '&number=$number',
                 ),
               ),
             );
@@ -284,24 +319,26 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
 class _UnitEditorCard extends StatelessWidget {
   final Unit unit;
   final int unitNumber;
-  final List<Lesson?> lessons;
-  final bool canDelete;
+  final List<Lesson> lessons;
   final Future<void> Function() onRenameUnit;
   final Future<void> Function() onDeleteUnit;
+  final Future<void> Function() onAddLesson;
+  final Future<void> Function(Lesson) onDeleteLesson;
   final Future<void> Function(Lesson) onRenameLesson;
-  final Future<void> Function(int from, int to) onSwapLessons;
+  final Future<void> Function(Lesson, int) onMoveLesson;
   final void Function(Lesson) onOpenLesson;
-  final void Function(Lesson) onOpenQuestions;
+  final void Function(Lesson, int) onOpenQuestions;
 
   const _UnitEditorCard({
     required this.unit,
     required this.unitNumber,
     required this.lessons,
-    required this.canDelete,
     required this.onRenameUnit,
     required this.onDeleteUnit,
+    required this.onAddLesson,
+    required this.onDeleteLesson,
     required this.onRenameLesson,
-    required this.onSwapLessons,
+    required this.onMoveLesson,
     required this.onOpenLesson,
     required this.onOpenQuestions,
   });
@@ -325,57 +362,53 @@ class _UnitEditorCard extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               TextButton.icon(
-                onPressed: canDelete ? onDeleteUnit : null,
+                onPressed: onDeleteUnit,
                 icon: const Icon(Icons.delete_outline, size: 16),
-                label: Text(
+                label: const Text(
                   'حذف الوحدة',
                   style: TextStyle(
                     fontFamily: kAdminFont,
                     fontSize: 12,
-                    color: canDelete ? HaffarColors.error : HaffarColors.grey3,
+                    color: HaffarColors.error,
                   ),
                 ),
               ),
             ],
           ),
-          if (!canDelete)
-            const Align(
-              alignment: AlignmentDirectional.centerStart,
+          const SizedBox(height: 4),
+          for (var k = 0; k < lessons.length; k++) ...[
+            _lessonRow(context, k),
+            if (k < lessons.length - 1) const Divider(height: 10),
+          ],
+          if (lessons.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'الحذف متاح لآخر وحدة فقط',
+                'لا توجد دروس في هذه الوحدة',
                 style: TextStyle(
                   fontFamily: kAdminFont,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: HaffarColors.grey3,
                 ),
               ),
             ),
-          const SizedBox(height: 4),
-          for (var k = 0; k < 3; k++) ...[
-            _lessonRow(context, k),
-            if (k < 2) const Divider(height: 10),
-          ],
+          const Divider(height: 10),
+          TextButton.icon(
+            onPressed: onAddLesson,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text(
+              'إضافة درس',
+              style: TextStyle(fontFamily: kAdminFont, fontSize: 12),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _lessonRow(BuildContext context, int localIndex) {
-    final globalIndex = unit.index * 3 + localIndex;
     final lesson = lessons[localIndex];
-    if (lesson == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          'درس مفقود',
-          style: TextStyle(
-            fontFamily: kAdminFont,
-            fontSize: 12,
-            color: HaffarColors.grey3,
-          ),
-        ),
-      );
-    }
+    final canDelete = lessons.length > 1;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () => onOpenLesson(lesson),
@@ -392,7 +425,7 @@ class _UnitEditorCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${globalIndex + 1}',
+                '${localIndex + 1}',
                 style: const TextStyle(
                   fontFamily: kAdminFont,
                   fontSize: 11,
@@ -417,7 +450,7 @@ class _UnitEditorCard extends StatelessWidget {
             IconButton(
               tooltip: 'سؤال داخل الدرس',
               visualDensity: VisualDensity.compact,
-              onPressed: () => onOpenQuestions(lesson),
+              onPressed: () => onOpenQuestions(lesson, localIndex + 1),
               icon: const Icon(
                 Icons.quiz_outlined,
                 size: 18,
@@ -435,18 +468,26 @@ class _UnitEditorCard extends StatelessWidget {
               ),
             ),
             IconButton(
+              tooltip: canDelete ? 'حذف الدرس' : 'آخر درس في الوحدة',
+              visualDensity: VisualDensity.compact,
+              onPressed: canDelete ? () => onDeleteLesson(lesson) : null,
+              icon: Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: canDelete ? HaffarColors.error : HaffarColors.grey3,
+              ),
+            ),
+            IconButton(
               tooltip: 'تحريك لأعلى',
               visualDensity: VisualDensity.compact,
-              onPressed: localIndex > 0
-                  ? () => onSwapLessons(globalIndex, globalIndex - 1)
-                  : null,
+              onPressed: localIndex > 0 ? () => onMoveLesson(lesson, -1) : null,
               icon: const Icon(Icons.arrow_upward, size: 18),
             ),
             IconButton(
               tooltip: 'تحريك لأسفل',
               visualDensity: VisualDensity.compact,
-              onPressed: localIndex < 2
-                  ? () => onSwapLessons(globalIndex, globalIndex + 1)
+              onPressed: localIndex < lessons.length - 1
+                  ? () => onMoveLesson(lesson, 1)
                   : null,
               icon: const Icon(Icons.arrow_downward, size: 18),
             ),

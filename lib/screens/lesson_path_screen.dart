@@ -9,7 +9,8 @@ import '../utils/routes.dart';
 import '../widgets/lesson_node.dart';
 
 /// Lesson path screen — shows the S-curve of lessons for the selected subject.
-/// Each node represents one lesson (index 0–5), with progress tracked in ProgressProvider.
+/// Each node represents one lesson; lessons are dynamic (any count per unit)
+/// and progress is tracked in ProgressProvider.
 class LessonPathScreen extends StatelessWidget {
   const LessonPathScreen({super.key});
 
@@ -26,21 +27,38 @@ class LessonPathScreen extends StatelessWidget {
     final progress = context.watch<ProgressProvider>();
     final subject = content.subjectById(subjectId);
     final totalLessons = content.lessonCountOf(subjectId);
-    final completedLessons = progress.subjectCompletedCount(subjectId);
 
-    // Filter lessons by unit if unit is specified
-    final startLesson = unitIndex >= 0 ? unitIndex * 3 : 0;
-    final endLesson = unitIndex >= 0 ? (unitIndex + 1) * 3 : totalLessons;
-    final relevantLessons = List.generate(
-      endLesson - startLesson,
-      (i) => startLesson + i,
-    );
+    // Actual lessons: one unit, or the whole subject in display order.
+    final relevantLessons = unitIndex >= 0
+        ? content.lessonsOfUnit(subjectId, unitIndex)
+        : content.lessonsOf(subjectId);
+    final relevantIndexes = relevantLessons.map((l) => l.index).toList();
+    final completedCount = relevantIndexes
+        .where((l) => progress.isSubjectLessonCompleted(subjectId, l))
+        .length;
+    int? currentIndex;
+    for (final lesson in relevantLessons) {
+      if (!progress.isSubjectLessonCompleted(subjectId, lesson.index)) {
+        currentIndex = lesson.index;
+        break;
+      }
+    }
+
+    // Unit display ordinal survives unit_index gaps (any unit is deletable).
+    final units = subject?.units ?? const [];
+    final unitPos = units.indexWhere((u) => u.index == unitIndex);
+    final unitNumber = unitPos >= 0 ? unitPos + 1 : unitIndex + 1;
+    final shownLesson = relevantIndexes.isEmpty
+        ? 0
+        : completedCount >= relevantIndexes.length
+        ? relevantIndexes.length
+        : completedCount + 1;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           unitIndex >= 0
-              ? 'الوحدة ${Unit.toArabicNumeral(unitIndex + 1)}'
+              ? 'الوحدة ${Unit.toArabicNumeral(unitNumber)}'
               : 'مسار ${subject?.name ?? subjectId}',
         ),
         leading: IconButton(
@@ -56,12 +74,9 @@ class LessonPathScreen extends StatelessWidget {
             children: [
               // Progress bar
               LinearProgressIndicator(
-                value: relevantLessons.isEmpty
+                value: relevantIndexes.isEmpty
                     ? 0
-                    : relevantLessons
-                              .where((l) => l < completedLessons)
-                              .length /
-                          relevantLessons.length,
+                    : completedCount / relevantIndexes.length,
                 minHeight: 8,
                 borderRadius: BorderRadius.circular(4),
                 backgroundColor: Colors.grey.shade200,
@@ -72,8 +87,8 @@ class LessonPathScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 unitIndex >= 0
-                    ? 'الدرس ${relevantLessons.where((l) => l < completedLessons).length + 1} من ${relevantLessons.length}'
-                    : 'الدرس ${completedLessons + 1} من $totalLessons',
+                    ? 'الدرس $shownLesson من ${relevantIndexes.length}'
+                    : 'الدرس ${completedCount >= totalLessons ? totalLessons : completedCount + 1} من $totalLessons',
                 style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 13,
@@ -86,19 +101,20 @@ class LessonPathScreen extends StatelessWidget {
               Expanded(
                 child: ListView.builder(
                   itemCount: relevantLessons.length,
-                  itemBuilder: (context, index) {
-                    final lessonIndex = relevantLessons[index];
+                  itemBuilder: (context, i) {
+                    final lesson = relevantLessons[i];
+                    final lessonIndex = lesson.index;
                     final isCompleted = progress.isSubjectLessonCompleted(
                       subjectId,
                       lessonIndex,
                     );
-                    final isCurrent = lessonIndex == completedLessons;
+                    final isCurrent = lessonIndex == currentIndex;
                     // All lessons are open — the user picks the order.
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 32),
                       child: Center(
                         child: LessonNode(
-                          label: 'درس ${Unit.toArabicNumeral(lessonIndex + 1)}',
+                          label: 'درس ${Unit.toArabicNumeral(i + 1)}',
                           isCompleted: isCompleted,
                           isCurrent: isCurrent,
                           isLocked: false,

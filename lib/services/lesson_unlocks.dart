@@ -12,25 +12,27 @@ abstract class LessonUnlockLookup {
 class LessonUnlocks {
   LessonUnlocks._();
 
-  /// True when [lessonIndex] is the first lesson of its unit.
+  /// True when [lessonIndex] is the first lesson of its unit in display
+  /// order (lessons are dynamic: gaps in lesson_index are normal).
   static bool isUnitStart(
     LessonUnlockLookup lookup,
     String subjectId,
     int lessonIndex,
   ) {
-    final unitLessons = lookup
-        .lessonsOf(subjectId)
-        .where((l) => l.index == lessonIndex)
-        .toList();
-    if (unitLessons.isEmpty) return false;
-    final unitIndex = unitLessons.first.unitIndex;
-    return !lookup
-        .lessonsOf(subjectId)
-        .any((l) => l.unitIndex == unitIndex && l.index < lessonIndex);
+    final lessons = lookup.lessonsOf(subjectId);
+    for (var i = 0; i < lessons.length; i++) {
+      if (lessons[i].index != lessonIndex) continue;
+      final unitIndex = lessons[i].unitIndex;
+      // Lists are sorted by (unit, position): any earlier row of the same
+      // unit means this is not the unit's first lesson.
+      return !lessons.take(i).any((l) => l.unitIndex == unitIndex);
+    }
+    return false;
   }
 
-  /// A lesson is reachable when it starts a unit or all preceding lessons
-  /// are completed.
+  /// A lesson is reachable when it starts a unit or every lesson before it
+  /// in display order is completed. Missing indexes are skipped naturally
+  /// because the walk follows actual lessons, not arithmetic.
   static bool isLessonUnlocked({
     required LessonUnlockLookup lookup,
     required bool Function(String subjectId, int lessonIndex) isCompleted,
@@ -38,10 +40,11 @@ class LessonUnlocks {
     required int lessonIndex,
   }) {
     if (isUnitStart(lookup, subjectId, lessonIndex)) return true;
-    for (var i = 0; i < lessonIndex; i++) {
-      if (!isCompleted(subjectId, i)) return false;
+    for (final lesson in lookup.lessonsOf(subjectId)) {
+      if (lesson.index == lessonIndex) return true;
+      if (!isCompleted(subjectId, lesson.index)) return false;
     }
-    return true;
+    return false;
   }
 }
 
@@ -60,7 +63,7 @@ List<Question> buildLessonQuiz({
   );
 }
 
-/// Builds a unit quiz from the unit's three lessons.
+/// Builds a unit quiz from the unit's questions (any lesson count).
 List<Question> buildUnitQuiz({
   required String subjectId,
   required int unitIndex,

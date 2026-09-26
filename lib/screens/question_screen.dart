@@ -22,6 +22,7 @@ class _QuestionScreenState extends State<QuestionScreen>
   late String _subjectId;
   late String _subjectName;
   late int _lessonIndex;
+  late int _lessonNumber;
   late int _questionIndex;
   late List<Question> _questions;
   late Question _question;
@@ -54,6 +55,10 @@ class _QuestionScreenState extends State<QuestionScreen>
     _subjectId = uri.queryParameters['subject'] ?? 'science';
     _subjectName = content.subjectById(_subjectId)?.name ?? _subjectId;
     _lessonIndex = int.tryParse(uri.queryParameters['lesson'] ?? '0') ?? 0;
+    // Display ordinal — lesson_index may contain gaps in dynamic curricula.
+    final lessons = content.lessonsOf(_subjectId);
+    final lessonPos = lessons.indexWhere((l) => l.index == _lessonIndex);
+    _lessonNumber = lessonPos >= 0 ? lessonPos + 1 : _lessonIndex + 1;
     _questionIndex = int.tryParse(uri.queryParameters['q'] ?? '0') ?? 0;
     _questions = content.getQuestions(_subjectId, _lessonIndex);
     _question = _questions.isNotEmpty
@@ -139,7 +144,7 @@ class _QuestionScreenState extends State<QuestionScreen>
                     child: QuestionWidgetFactory.create(
                       question: _question,
                       subjectName: _subjectName,
-                      lessonNumber: _lessonIndex + 1,
+                      lessonNumber: _lessonNumber,
                       onBack: _back,
                       onSkip: _skip,
                       onNext: _nextQuestion,

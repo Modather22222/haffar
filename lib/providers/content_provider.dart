@@ -29,6 +29,11 @@ class ContentProvider extends ChangeNotifier {
   List<Lesson> lessonsOf(String subjectId) =>
       _lessonsBySubject[subjectId] ?? const [];
 
+  /// Lessons of one unit, in display order (position within the unit).
+  List<Lesson> lessonsOfUnit(String subjectId, int unitIndex) => lessonsOf(
+    subjectId,
+  ).where((lesson) => lesson.unitIndex == unitIndex).toList();
+
   Lesson? lessonOf(String subjectId, int lessonIndex) {
     for (final lesson in lessonsOf(subjectId)) {
       if (lesson.index == lessonIndex) return lesson;
@@ -49,15 +54,19 @@ class ContentProvider extends ChangeNotifier {
   }
 
   List<Question> getUnitQuestions(String subjectId, int unitIndex) {
-    final start = unitIndex * 3;
-    return questionsOf(subjectId)
-        .where((q) => q.lessonIndex >= start && q.lessonIndex < start + 3)
-        .toList()
-      ..sort(
-        (a, b) => a.lessonIndex != b.lessonIndex
-            ? a.lessonIndex.compareTo(b.lessonIndex)
-            : a.sortOrder.compareTo(b.sortOrder),
-      );
+    // Lessons are dynamic: scope by the unit's actual lesson indexes
+    // (stable identities), never by arithmetic on unit position.
+    final lessonIndexes = lessonsOfUnit(
+      subjectId,
+      unitIndex,
+    ).map((l) => l.index).toSet();
+    return questionsOf(
+      subjectId,
+    ).where((q) => lessonIndexes.contains(q.lessonIndex)).toList()..sort(
+      (a, b) => a.lessonIndex != b.lessonIndex
+          ? a.lessonIndex.compareTo(b.lessonIndex)
+          : a.sortOrder.compareTo(b.sortOrder),
+    );
   }
 
   int lessonCountOf(String subjectId) => lessonsOf(subjectId).length;
@@ -80,6 +89,15 @@ class ContentProvider extends ChangeNotifier {
       _lessonsBySubject = {};
       for (final lesson in results[1] as List<Lesson>) {
         _lessonsBySubject.putIfAbsent(lesson.subjectId, () => []).add(lesson);
+      }
+      // Display order: units ascending, then position inside each unit —
+      // lesson_index is a stable identity and may contain gaps.
+      for (final list in _lessonsBySubject.values) {
+        list.sort(
+          (a, b) => a.unitIndex != b.unitIndex
+              ? a.unitIndex.compareTo(b.unitIndex)
+              : a.position.compareTo(b.position),
+        );
       }
       _questionsBySubject = {};
       for (final question in results[2] as List<Question>) {

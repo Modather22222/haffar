@@ -23,7 +23,6 @@ class UnitsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = context.watch<ContentProvider>();
     final progress = context.watch<ProgressProvider>();
-    final completedCount = progress.subjectCompletedCount(subjectId);
 
     return Scaffold(
       appBar: AppBar(
@@ -78,12 +77,21 @@ class UnitsScreen extends StatelessWidget {
         child: ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: subject.units.length,
-          itemBuilder: (context, unitIndex) {
-            final unit = subject.units[unitIndex];
-            final unitLessons = List.generate(3, (i) => unitIndex * 3 + i);
-            final isCompleted = unitLessons.every(
-              (l) => progress.isSubjectLessonCompleted(subjectId, l),
-            );
+          itemBuilder: (context, i) {
+            final unit = subject.units[i];
+            final unitLessons = content.lessonsOfUnit(subjectId, unit.index);
+            final isCompleted =
+                unitLessons.isNotEmpty &&
+                unitLessons.every(
+                  (l) => progress.isSubjectLessonCompleted(subjectId, l.index),
+                );
+            int? firstUncompleted;
+            for (final lesson in unitLessons) {
+              if (!progress.isSubjectLessonCompleted(subjectId, lesson.index)) {
+                firstUncompleted = lesson.index;
+                break;
+              }
+            }
 
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -107,7 +115,7 @@ class UnitsScreen extends StatelessWidget {
                   // Unit header
                   InkWell(
                     onTap: () => context.push(
-                      '${Routes.lessonPath}?subject=$subjectId&unit=$unitIndex',
+                      '${Routes.lessonPath}?subject=$subjectId&unit=${unit.index}',
                     ),
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(16),
@@ -143,9 +151,9 @@ class UnitsScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                const Text(
-                                  '٣ دروس',
-                                  style: TextStyle(
+                                Text(
+                                  Unit.lessonsCountLabel(unitLessons.length),
+                                  style: const TextStyle(
                                     fontFamily: 'PlusJakartaSans',
                                     fontSize: 13,
                                     color: HaffarColors.outline,
@@ -166,10 +174,12 @@ class UnitsScreen extends StatelessWidget {
                   // Lessons list — all open, the user picks the order
                   ...[
                     const Divider(height: 1),
-                    ...unitLessons.map((lessonIndex) {
+                    ...unitLessons.asMap().entries.map((entry) {
+                      final lesson = entry.value;
+                      final lessonIndex = lesson.index;
                       final isLessonCompleted = progress
                           .isSubjectLessonCompleted(subjectId, lessonIndex);
-                      final isLessonCurrent = lessonIndex == completedCount;
+                      final isLessonCurrent = lessonIndex == firstUncompleted;
                       return InkWell(
                         onTap: () => context.push(
                           '${Routes.lessonDetail}'
@@ -204,7 +214,7 @@ class UnitsScreen extends StatelessWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'درس ${Unit.toArabicNumeral(lessonIndex + 1)}',
+                                  'درس ${Unit.toArabicNumeral(entry.key + 1)}',
                                   style: const TextStyle(
                                     fontFamily: 'BeVietnamPro',
                                     fontSize: 14,
@@ -224,13 +234,17 @@ class UnitsScreen extends StatelessWidget {
                     const Divider(height: 1),
                     Builder(
                       builder: (_) {
-                        final allLessonsDone = unitLessons.every(
-                          (l) =>
-                              progress.isSubjectLessonCompleted(subjectId, l),
-                        );
+                        final allLessonsDone =
+                            unitLessons.isNotEmpty &&
+                            unitLessons.every(
+                              (l) => progress.isSubjectLessonCompleted(
+                                subjectId,
+                                l.index,
+                              ),
+                            );
                         final exerciseDone = progress.isUnitExerciseCompleted(
                           subjectId,
-                          unitIndex,
+                          unit.index,
                         );
                         return InkWell(
                           onTap: allLessonsDone
@@ -238,7 +252,7 @@ class UnitsScreen extends StatelessWidget {
                                   '${Routes.unitExercise}'
                                   '?subject=$subjectId'
                                   '&name=${Uri.encodeComponent(subject.name)}'
-                                  '&unit=$unitIndex',
+                                  '&unit=${unit.index}',
                                 )
                               : null,
                           child: Padding(

@@ -10,9 +10,10 @@ import '../utils/content_validators.dart';
 /// Admin-side CRUD for curriculum content.
 ///
 /// Simple row edits go through PostgREST under the `fn_is_admin()` RLS
-/// policies; structural changes (unit create/delete, lesson swap, question
-/// reorder) go through SECURITY DEFINER RPCs that enforce the curriculum
-/// invariants (unit i owns lessons 3i..3i+2). Images upload to the public
+/// policies; structural changes (unit/lesson create and delete, lesson moves,
+/// question reorder) go through SECURITY DEFINER RPCs. Lessons are dynamic:
+/// `lesson_index` is a stable identity (never renumbered, gaps allowed) and
+/// `position` orders lessons inside a unit. Images upload to the public
 /// `content` bucket, which only accepts writes from admins.
 class ContentAdminRepository {
   ContentAdminRepository(this._client);
@@ -77,7 +78,8 @@ class ContentAdminRepository {
     return Map<String, dynamic>.from(result as Map);
   }
 
-  /// Deletes the LAST unit with its lessons and questions (admin_delete_unit).
+  /// Deletes any unit with its lessons, questions, and matching progress rows
+  /// (admin_delete_unit RPC). Unit indexes are never renumbered.
   Future<void> deleteUnit(String subjectId, int unitIndex) async {
     await _client.rpc(
       'admin_delete_unit',
@@ -99,12 +101,44 @@ class ContentAdminRepository {
         .eq('id', lessonId);
   }
 
-  /// Exchanges two lesson positions together with their questions
-  /// (admin_swap_lessons RPC).
-  Future<void> swapLessons(String subjectId, int from, int to) async {
+  /// Appends a lesson shell to an existing unit (admin_create_lesson RPC).
+  /// Returns the created `{id, lesson_index, position}` object.
+  Future<Map<String, dynamic>> createLesson(
+    String subjectId,
+    int unitIndex, {
+    String? title,
+  }) async {
+    final result = await _client.rpc(
+      'admin_create_lesson',
+      params: {
+        'p_subject_id': subjectId,
+        'p_unit_index': unitIndex,
+        'p_title': title,
+      },
+    );
+    return Map<String, dynamic>.from(result as Map);
+  }
+
+  /// Deletes a lesson with its questions and every user's progress rows for
+  /// it (admin_delete_lesson RPC). The unit must keep at least one lesson.
+  Future<void> deleteLesson(String subjectId, int lessonIndex) async {
     await _client.rpc(
-      'admin_swap_lessons',
-      params: {'p_subject_id': subjectId, 'p_from': from, 'p_to': to},
+      'admin_delete_lesson',
+      params: {'p_subject_id': subjectId, 'p_lesson_index': lessonIndex},
+    );
+  }
+
+  /// Swaps a lesson with its neighbour inside the same unit
+  /// (admin_move_lesson RPC; [delta] is -1 or +1). `lesson_index` never
+  /// changes, so student progress stays attached to the same lesson.
+  Future<void> moveLesson(String subjectId, int lessonIndex, int delta) async {
+    await _client.rpc(
+      'admin_move_lesson',
+      params: {
+        'p_subject_id': subjectId,
+        'p_lesson_index': lessonIndex,
+        'p_delta': delta,
+      },
     );
   }
 

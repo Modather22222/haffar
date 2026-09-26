@@ -173,21 +173,21 @@ class AppProvider extends ChangeNotifier {
 
   bool isSubjectLessonUnlocked(String subjectId, int lessonIndex) {
     if (isUnitStart(subjectId, lessonIndex)) return true;
-    for (var i = 0; i < lessonIndex; i++) {
-      if (!isSubjectLessonCompleted(subjectId, i)) return false;
+    for (final lesson in lessonsOf(subjectId)) {
+      if (lesson.index == lessonIndex) return true;
+      if (!isSubjectLessonCompleted(subjectId, lesson.index)) return false;
     }
-    return true;
+    return false;
   }
 
   bool isUnitStart(String subjectId, int lessonIndex) {
-    final unitLessons = lessonsOf(
-      subjectId,
-    ).where((l) => l.index == lessonIndex).toList();
-    if (unitLessons.isEmpty) return false;
-    final unitIndex = unitLessons.first.unitIndex;
-    return !lessonsOf(
-      subjectId,
-    ).any((l) => l.unitIndex == unitIndex && l.index < lessonIndex);
+    final lessons = lessonsOf(subjectId);
+    for (var i = 0; i < lessons.length; i++) {
+      if (lessons[i].index != lessonIndex) continue;
+      final unitIndex = lessons[i].unitIndex;
+      return !lessons.take(i).any((l) => l.unitIndex == unitIndex);
+    }
+    return false;
   }
 
   void completeUnitExercise(String subjectId, int unitIndex) =>

@@ -356,58 +356,68 @@ class _SubjectCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            for (final l in stat.lessonsDetail) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${l.lessonIndex + 1}. ${l.title}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: kAdminFont,
-                        fontSize: 12,
-                        color: HaffarColors.textSecondary,
-                      ),
-                    ),
+            for (var li = 0; li < stat.lessonsDetail.length; li++)
+              _lessonCompletionRow(stat.lessonsDetail[li], li + 1, maxLesson),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _lessonCompletionRow(AdminLessonStat l, int number, int maxLesson) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '$number. ${l.title}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: kAdminFont,
+                    fontSize: 12,
+                    color: HaffarColors.textSecondary,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    fmtInt(l.completedBy),
-                    style: const TextStyle(
-                      fontFamily: kAdminFont,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: HaffarColors.textPrimary,
-                    ),
-                  ),
-                  if (l.attempts > 0) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      fmtPct(l.accuracy ?? 0),
-                      style: TextStyle(
-                        fontFamily: kAdminFont,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: (l.accuracy ?? 0) < 50 ? kChartRed : kChartGreen,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 3),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: l.completedBy / maxLesson,
-                  minHeight: 6,
-                  backgroundColor: HaffarColors.surfaceHigh,
-                  valueColor: AlwaysStoppedAnimation(_accent),
                 ),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(width: 8),
+              Text(
+                fmtInt(l.completedBy),
+                style: const TextStyle(
+                  fontFamily: kAdminFont,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: HaffarColors.textPrimary,
+                ),
+              ),
+              if (l.attempts > 0) ...[
+                const SizedBox(width: 6),
+                Text(
+                  fmtPct(l.accuracy ?? 0),
+                  style: TextStyle(
+                    fontFamily: kAdminFont,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: (l.accuracy ?? 0) < 50 ? kChartRed : kChartGreen,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
+          const SizedBox(height: 3),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: l.completedBy / maxLesson,
+              minHeight: 6,
+              backgroundColor: HaffarColors.surfaceHigh,
+              valueColor: AlwaysStoppedAnimation(_accent),
+            ),
+          ),
         ],
       ),
     );

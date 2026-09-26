@@ -48,13 +48,18 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
   @override
   Widget build(BuildContext context) {
     final questions = _questions;
+    final content = context.watch<ContentProvider>();
+    // Display ordinal survives unit_index gaps (any unit is deletable).
+    final units = content.subjectById(widget.subjectId)?.units ?? const [];
+    final unitPos = units.indexWhere((u) => u.index == widget.unitIndex);
+    final unitNumber = unitPos >= 0 ? unitPos + 1 : widget.unitIndex + 1;
+    final unitArabic = Unit.toArabicNumeral(unitNumber);
+    final lessonCount = content
+        .lessonsOfUnit(widget.subjectId, widget.unitIndex)
+        .length;
     return Scaffold(
       backgroundColor: HaffarColors.bgPage,
-      appBar: AppBar(
-        title: Text(
-          'تمرين الوحدة ${Unit.toArabicNumeral(widget.unitIndex + 1)}',
-        ),
-      ),
+      appBar: AppBar(title: Text('تمرين الوحدة $unitArabic')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -85,7 +90,7 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'تمرين الوحدة ${Unit.toArabicNumeral(widget.unitIndex + 1)}',
+                      'تمرين الوحدة $unitArabic',
                       style: const TextStyle(
                         fontFamily: 'BeVietnamPro',
                         fontSize: 24,
@@ -135,7 +140,7 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                       height: 22,
                       fit: BoxFit.contain,
                     ),
-                    '٣',
+                    Unit.toArabicNumeral(lessonCount),
                     'دروس',
                   ),
                   const SizedBox(width: 12),
@@ -167,7 +172,7 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                               '${Routes.practiceQuiz}?'
                               'subject=${Uri.encodeComponent(widget.subjectId)}'
                               '&title=${Uri.encodeComponent('${widget.subjectName} - تمرين الوحدة '
-                              '${Unit.toArabicNumeral(widget.unitIndex + 1)}')}'
+                              '$unitArabic')}'
                               '&kind=unit&ref=${widget.unitIndex}',
                               extra: questions,
                             )

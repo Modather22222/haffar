@@ -32,6 +32,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
   late TabController _tabController;
   late String _subjectName;
   late Lesson? _lesson;
+  late int _lessonOrdinal;
   late List<Question> _quizQuestions;
 
   @override
@@ -47,6 +48,10 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
     _subjectName =
         content.subjectById(widget.subjectId)?.name ?? widget.subjectId;
     _lesson = content.lessonOf(widget.subjectId, widget.lessonIndex);
+    // Display ordinal (position in the subject) — lesson_index may have gaps.
+    final lessons = content.lessonsOf(widget.subjectId);
+    final pos = lessons.indexWhere((l) => l.index == widget.lessonIndex);
+    _lessonOrdinal = pos >= 0 ? pos + 1 : widget.lessonIndex + 1;
     _quizQuestions = buildLessonQuiz(
       subjectId: widget.subjectId,
       lessonIndex: widget.lessonIndex,
@@ -59,7 +64,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
   }
 
   String get _lessonTitle =>
-      _lesson?.title ?? 'درس ${Unit.toArabicNumeral(widget.lessonIndex + 1)}';
+      _lesson?.title ?? 'درس ${Unit.toArabicNumeral(_lessonOrdinal)}';
 
   Widget _buildSummaryTab() {
     return SingleChildScrollView(

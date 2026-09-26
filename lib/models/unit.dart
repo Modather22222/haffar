@@ -29,4 +29,13 @@ class Unit {
           .toList(),
     );
   }
+
+  /// Arabic label for a lesson count ("درس واحد", "درسان", "N دروس", ...).
+  static String lessonsCountLabel(int n) {
+    if (n <= 0) return 'لا توجد دروس';
+    if (n == 1) return 'درس واحد';
+    if (n == 2) return 'درسان';
+    if (n <= 10) return '$n دروس';
+    return '$n درساً';
+  }
 }
