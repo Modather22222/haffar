@@ -34,12 +34,14 @@ const Color kChartGreen = Color(0xFF10B981);
 const Color kChartPurple = Color(0xFF8B5CF6);
 const Color kChartRed = Color(0xFFEF4444);
 
-/// A single KPI tile (label + big value + icon).
+/// A single KPI tile (label + big value + icon). [onTap] makes the whole
+/// tile pressable (e.g. المشتركون → الاشتراك screen).
 class AdminStatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color accent;
+  final VoidCallback? onTap;
 
   const AdminStatCard({
     super.key,
@@ -47,11 +49,12 @@ class AdminStatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     this.accent = HaffarColors.primary,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: HaffarColors.white,
@@ -106,6 +109,8 @@ class AdminStatCard extends StatelessWidget {
         ],
       ),
     );
+    if (onTap == null) return card;
+    return GestureDetector(onTap: onTap, child: card);
   }
 }
 

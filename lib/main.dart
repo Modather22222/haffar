@@ -33,6 +33,7 @@ import 'screens/question_screen.dart';
 import 'screens/feedback_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/subscription_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'services/push_service.dart';
@@ -51,6 +52,7 @@ import 'screens/onboarding_fourteen_screen.dart';
 import 'screens/onboarding_fifteen_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/admin/admin_shell_screen.dart';
+import 'screens/admin/admin_subscriptions_screen.dart';
 import 'screens/admin/admin_user_detail_screen.dart';
 import 'screens/admin/admin_questions_screen.dart';
 import 'screens/admin/content_editor/content_editor_screen.dart';
@@ -436,7 +438,15 @@ final GoRouter router = GoRouter(
       builder: (_, _) => const AchievementsScreen(),
     ),
     GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+    GoRoute(
+      path: Routes.subscription,
+      builder: (_, _) => const SubscriptionScreen(),
+    ),
     GoRoute(path: Routes.admin, builder: (_, _) => const AdminShellScreen()),
+    GoRoute(
+      path: Routes.adminSubscriptions,
+      builder: (_, _) => const AdminSubscriptionsScreen(),
+    ),
     GoRoute(
       path: Routes.adminUser,
       builder: (_, state) {

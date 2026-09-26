@@ -25,6 +25,11 @@ class EconomyProvider extends ChangeNotifier {
   String league = 'bronze';
   bool isSubscribed = false;
 
+  /// profiles.subscribed_until — end of the paid period (null = manual/open
+  /// grant). Recomputed against the clock so a session outliving the period
+  /// still loses the benefits on time.
+  DateTime? subscriptionExpiresAt;
+
   /// profiles.selected_banner key ('first'…'fourth'); null → threshold pick.
   String? selectedBanner;
 
@@ -139,6 +144,11 @@ class EconomyProvider extends ChangeNotifier {
     gems = (profile['gems'] as int?) ?? gems;
     league = (profile['league'] as String?) ?? league;
     isSubscribed = (profile['is_subscribed'] as bool?) ?? false;
+    final untilRaw = profile['subscribed_until'] as String?;
+    subscriptionExpiresAt = untilRaw == null
+        ? null
+        : DateTime.tryParse(untilRaw)?.toUtc();
+    _recomputeSubscriptionExpiry();
     selectedBanner = profile['selected_banner'] as String?;
     hearts = (profile['hearts'] as int?) ?? hearts;
     final hu = profile['hearts_updated_at'] as String?;
@@ -156,8 +166,22 @@ class EconomyProvider extends ChangeNotifier {
   void _startHeartsRefreshTimer() {
     _heartsRefreshTimer?.cancel();
     _heartsRefreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      _recomputeSubscriptionExpiry();
       unawaited(refreshHearts());
     });
+  }
+
+  /// Drops the subscriber flag once the paid period is over (the hourly DB
+  /// sweep flips the stored column too — this keeps long sessions honest).
+  void _recomputeSubscriptionExpiry() {
+    final until = subscriptionExpiresAt;
+    if (isSubscribed &&
+        until != null &&
+        until.isBefore(DateTime.now().toUtc())) {
+      isSubscribed = false;
+      AppLog.info('subscription expired at $until');
+      notifyListeners();
+    }
   }
 
   Future<void> refreshHearts() async {

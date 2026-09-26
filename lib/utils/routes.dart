@@ -36,8 +36,10 @@ abstract class Routes {
   static const onboardingFourteen = '/onboarding/fourteen';
   static const onboardingFifteen = '/onboarding/fifteen';
   static const signIn = '/sign-in';
+  static const subscription = '/subscription';
   static const admin = '/admin';
   static const adminUser = '/admin/user';
+  static const adminSubscriptions = '/admin/subscriptions';
   static const adminQuestions = '/admin/questions';
   static const adminContentEditor = '/admin/content/editor';
   static const adminContentUnits = '/admin/content/editor/units';

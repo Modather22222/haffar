@@ -19,7 +19,7 @@ import '../widgets/mascot.dart';
 import '../widgets/quiz_controller.dart';
 import '../utils/app_logger.dart';
 import '../utils/app_toast.dart';
-import '../utils/game_constants.dart';
+import '../utils/routes.dart';
 import '../utils/sound_manager.dart';
 
 /// Reusable full-screen practice quiz driving any ordered question list
@@ -242,63 +242,105 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
   }
 
   Widget _heartsDepletedBody() {
-    final isUnit = widget.attemptKind == 'unit';
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Mascot(pose: MascotPose.sleepy, size: 120),
-            const SizedBox(height: 24),
-            Text(
-              isUnit ? 'قلوب التمرين خلصت!' : 'قلوبك خلصت!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: HaffarColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isUnit ? 'غلطت 5 مرات — ارجع وحاول من جديد' : 'استنى وارجع',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: HaffarColors.textSecondary,
-              ),
-            ),
-            // Unit pool is private per attempt — no regen countdown.
-            if (!isUnit) ...[
-              const SizedBox(height: 12),
-              Text(
-                'كل ${GameConstants.heartRegenInterval.inMinutes} دقائق بيرجع قلب',
+    // Unit pool is private per attempt — no regen countdown, and the
+    // حفار برو plan doesn't change unit hearts, so no CTA either.
+    if (widget.attemptKind == 'unit') {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Mascot(pose: MascotPose.sleepy, size: 120),
+              const SizedBox(height: 24),
+              const Text(
+                'قلوب التمرين خلصت!',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'PlusJakartaSans',
-                  fontSize: 14,
+                style: TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: HaffarColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'غلطت 5 مرات — ارجع وحاول من جديد',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                   color: HaffarColors.textSecondary,
                 ),
               ),
             ],
-          ],
+          ),
         ),
-      ),
+      );
+    }
+    // Lesson: title, then the gradient card fills the rest of the area
+    // between the progress bar and the bottom buttons.
+    return const Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(24, 4, 24, 12),
+          child: Text(
+            'قلوبك خلصت!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'BeVietnamPro',
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: HaffarColors.textPrimary,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: _HeartsProCtaCard(),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _heartsDepletedButton() {
     final isUnit = widget.attemptKind == 'unit';
+    if (isUnit) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: HaffarPrimaryButton(
+          label: 'ارجع للتمرين',
+          fullWidth: true,
+          onPressed: () => context.pop(),
+        ),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: HaffarPrimaryButton(
-        label: isUnit ? 'ارجع للتمرين' : 'حسنا',
-        fullWidth: true,
-        onPressed: () => context.pop(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          HaffarPrimaryButton(
+            label: 'احصل على حفار برو',
+            fullWidth: true,
+            onPressed: () => context.push(Routes.subscription),
+          ),
+          TextButton(
+            onPressed: () => context.pop(),
+            child: const Text(
+              'حق ارجع بعدين',
+              style: TextStyle(
+                fontFamily: 'BeVietnamPro',
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: HaffarColors.grey2,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -573,6 +615,110 @@ class _RepoAttemptSaver implements AttemptSaver {
       kind: kind,
       refIndex: refIndex,
       details: details,
+    );
+  }
+}
+
+/// Gradient حفار برو upsell shown on the lesson out-of-hearts screen —
+/// fills the space between the progress bar and the action buttons, with
+/// the hearts mascot + voice bubble (onboarding style) on the left.
+class _HeartsProCtaCard extends StatelessWidget {
+  const _HeartsProCtaCard();
+
+  static const _benefits = [
+    'قلوب غير محدودة في كل الدروس',
+    'ذاكر من غير ما توقف',
+    'امتحن على راحتك من غير خوف',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [HaffarColors.primary, HaffarColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: HaffarColors.primaryDark.withValues(alpha: 0.3),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Features on the right (RTL), vertically centred.
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final b in _benefits)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            b,
+                            style: const TextStyle(
+                              fontFamily: 'BeVietnamPro',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Mascot + voice bubble on the left (RTL).
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const HaffarSpeechBubble(
+                tailPosition: BubbleTailPosition.center,
+                child: Text(
+                  'اشترك في حفار برو',
+                  style: TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: HaffarColors.grey1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: 170,
+                height: 170,
+                child: Image.asset(
+                  'assets/character/holding_hearts.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
