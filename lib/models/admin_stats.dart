@@ -389,8 +389,6 @@ class AdminLessonStat {
 class AdminSubjectStat {
   final String id;
   final String name;
-  final String? icon;
-  final String? colorHex;
   final int sortOrder;
   final int units;
   final int lessons;
@@ -403,8 +401,6 @@ class AdminSubjectStat {
   const AdminSubjectStat({
     required this.id,
     required this.name,
-    required this.icon,
-    required this.colorHex,
     required this.sortOrder,
     required this.units,
     required this.lessons,
@@ -426,8 +422,6 @@ class AdminSubjectStat {
     return AdminSubjectStat(
       id: json['id'] as String,
       name: (json['name'] as String?) ?? '',
-      icon: json['icon'] as String?,
-      colorHex: json['color_hex'] as String?,
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       units: (json['units'] as num?)?.toInt() ?? 0,
       lessons: (json['lessons'] as num?)?.toInt() ?? 0,

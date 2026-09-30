@@ -25,32 +25,17 @@ class ContentAdminRepository {
   Future<void> insertSubject({
     required String id,
     required String name,
-    required String icon,
-    required String colorHex,
     required int sortOrder,
   }) async {
     await _client.from('subjects').insert({
       'id': id,
       'name': name,
-      'icon': icon,
-      'color_hex': colorHex,
       'sort_order': sortOrder,
     });
   }
 
-  Future<void> updateSubject(
-    String id, {
-    String? name,
-    String? icon,
-    String? colorHex,
-    int? sortOrder,
-  }) async {
-    final patch = <String, dynamic>{
-      'name': ?name,
-      'icon': ?icon,
-      'color_hex': ?colorHex,
-      'sort_order': ?sortOrder,
-    };
+  Future<void> updateSubject(String id, {String? name, int? sortOrder}) async {
+    final patch = <String, dynamic>{'name': ?name, 'sort_order': ?sortOrder};
     if (patch.isEmpty) return;
     await _client.from('subjects').update(patch).eq('id', id);
   }
@@ -182,7 +167,7 @@ class ContentAdminRepository {
         .select()
         .eq('subject_id', subjectId)
         .eq('lesson_index', lessonIndex)
-        .order('sort_order');
+        .order('sort_order', ascending: true);
     return rows.map(Question.fromMap).toList();
   }
 

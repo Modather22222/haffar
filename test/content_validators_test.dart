@@ -33,20 +33,6 @@ void main() {
     });
   });
 
-  group('validateColorHex', () {
-    test('accepts #RRGGBB', () {
-      expect(validateColorHex('#FD7202'), isNull);
-      expect(validateColorHex('#abcdef'), isNull);
-    });
-
-    test('rejects other formats', () {
-      expect(validateColorHex('FD7202'), isNotNull);
-      expect(validateColorHex('#FFF'), isNotNull);
-      expect(validateColorHex('#GGGGGG'), isNotNull);
-      expect(validateColorHex(''), isNotNull);
-    });
-  });
-
   group('validateXpReward / validateSortOrder', () {
     test('bounds', () {
       expect(validateXpReward(0), isNotNull);

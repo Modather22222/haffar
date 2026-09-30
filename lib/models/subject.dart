@@ -4,16 +4,12 @@
 class Subject {
   final String id;
   final String name;
-  final String icon;
-  final String? colorHex;
   final int sortOrder;
   final List<Unit> units;
 
   Subject({
     required this.id,
     required this.name,
-    required this.icon,
-    this.colorHex,
     this.sortOrder = 0,
     List<Unit>? units,
   }) : units = units ?? const [];
@@ -22,14 +18,15 @@ class Subject {
       Subject(
         id: map['id'] as String,
         name: map['name'] as String,
-        icon: map['icon'] as String,
-        colorHex: map['color_hex'] as String?,
         sortOrder: (map['sort_order'] as int?) ?? 0,
         units: units,
       );
 
   /// Returns the asset path for this subject's image, or null if unavailable.
-  String? get imageAsset => _imageAssets[id];
+  String? get imageAsset => imageAssetFor(id);
+
+  /// Asset path for any subject id (used where only the id is available).
+  static String? imageAssetFor(String id) => _imageAssets[id];
 
   static const Map<String, String> _imageAssets = {
     'science': 'assets/subjects/sience.jpg',

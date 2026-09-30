@@ -279,10 +279,14 @@ class _HomeTab extends StatelessWidget {
                 ),
               )
             else
-              SizedBox(
+              const SizedBox(
                 height: 72,
                 child: Center(
-                  child: Text(s.icon, style: const TextStyle(fontSize: 36)),
+                  child: Icon(
+                    Icons.menu_book_outlined,
+                    size: 48,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             const SizedBox(height: 8),

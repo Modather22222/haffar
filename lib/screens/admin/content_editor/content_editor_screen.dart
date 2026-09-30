@@ -77,16 +77,12 @@ class _ContentEditorScreenState extends State<ContentEditorScreen> {
         await _admin.insertSubject(
           id: data.id,
           name: data.name,
-          icon: data.icon,
-          colorHex: data.colorHex,
           sortOrder: data.sortOrder,
         );
       } else {
         await _admin.updateSubject(
           subject.id,
           name: data.name,
-          icon: data.icon,
-          colorHex: data.colorHex,
           sortOrder: data.sortOrder,
         );
       }
@@ -103,10 +99,6 @@ class _ContentEditorScreenState extends State<ContentEditorScreen> {
   Future<_SubjectFormResult?> _showSubjectDialog(Subject? subject) {
     final idController = TextEditingController(text: subject?.id ?? '');
     final nameController = TextEditingController(text: subject?.name ?? '');
-    final iconController = TextEditingController(text: subject?.icon ?? '');
-    final colorController = TextEditingController(
-      text: subject?.colorHex ?? '#FD7202',
-    );
     final sortController = TextEditingController(
       text: (subject?.sortOrder ?? 0).toString(),
     );
@@ -146,22 +138,6 @@ class _ContentEditorScreenState extends State<ContentEditorScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: iconController,
-                  style: const TextStyle(fontFamily: kAdminFont, fontSize: 14),
-                  decoration: _decoration('الأيقونة (رمز/إيموجي)'),
-                  validator: (v) =>
-                      validateRequiredText(v ?? '', 'الأيقونة', max: 8),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: colorController,
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(fontFamily: kAdminFont, fontSize: 14),
-                  decoration: _decoration('اللون ‎#RRGGBB‎'),
-                  validator: (v) => validateColorHex(v ?? ''),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
                   controller: sortController,
                   keyboardType: TextInputType.number,
                   textDirection: TextDirection.ltr,
@@ -189,8 +165,6 @@ class _ContentEditorScreenState extends State<ContentEditorScreen> {
                 _SubjectFormResult(
                   id: idController.text.trim(),
                   name: nameController.text.trim(),
-                  icon: iconController.text.trim(),
-                  colorHex: colorController.text.trim().toUpperCase(),
                   sortOrder: int.parse(sortController.text),
                 ),
               );
@@ -315,15 +289,11 @@ class _ContentEditorScreenState extends State<ContentEditorScreen> {
 class _SubjectFormResult {
   final String id;
   final String name;
-  final String icon;
-  final String colorHex;
   final int sortOrder;
 
   const _SubjectFormResult({
     required this.id,
     required this.name,
-    required this.icon,
-    required this.colorHex,
     required this.sortOrder,
   });
 }
@@ -341,18 +311,10 @@ class _SubjectEditorCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Color get _accent {
-    final hex = subject.colorHex;
-    if (hex != null && hex.length == 7 && hex.startsWith('#')) {
-      final value = int.tryParse(hex.substring(1), radix: 16);
-      if (value != null) return Color(0xFF00000000 | value);
-    }
-    return HaffarColors.primary;
-  }
-
   @override
   Widget build(BuildContext context) {
     final unitCount = subject.units.length;
+    final imageAsset = subject.imageAsset;
     return AdminSectionCard(
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -361,15 +323,22 @@ class _SubjectEditorCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: imageAsset != null
+                      ? Image.asset(imageAsset, fit: BoxFit.cover)
+                      : const ColoredBox(
+                          color: Color(0x24FD7202),
+                          child: Icon(
+                            Icons.menu_book_outlined,
+                            size: 22,
+                            color: HaffarColors.primary,
+                          ),
+                        ),
                 ),
-                child: Text(subject.icon, style: const TextStyle(fontSize: 20)),
               ),
               const SizedBox(width: 12),
               Expanded(

@@ -99,9 +99,10 @@ class SubjectSelectScreen extends StatelessWidget {
                                 ),
                               )
                             else
-                              Text(
-                                subject.icon,
-                                style: const TextStyle(fontSize: 40),
+                              const Icon(
+                                Icons.menu_book_outlined,
+                                size: 40,
+                                color: Colors.white,
                               ),
                             const SizedBox(height: 8),
                             Text(

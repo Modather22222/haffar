@@ -4,7 +4,6 @@
 library;
 
 final _idPattern = RegExp(r'^[a-z][a-z0-9_]{1,39}$');
-final _colorPattern = RegExp(r'^#[0-9a-fA-F]{6}$');
 final _urlPattern = RegExp(r'^https?://');
 
 /// Subject id: lowercase slug used as the questions/lessons foreign key and
@@ -22,13 +21,6 @@ String? validateRequiredText(String value, String label, {int max = 300}) {
   final v = value.trim();
   if (v.isEmpty) return '$label مطلوب';
   if (v.length > max) return '$label طويل جداً (الحد $max حرف)';
-  return null;
-}
-
-String? validateColorHex(String value) {
-  final v = value.trim();
-  if (v.isEmpty) return 'اللون مطلوب';
-  if (!_colorPattern.hasMatch(v)) return 'اللون بصيغة ‎#RRGGBB‎';
   return null;
 }
 

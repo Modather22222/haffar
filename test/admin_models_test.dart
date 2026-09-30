@@ -251,8 +251,6 @@ void main() {
       final s = AdminSubjectStat.fromJson({
         'id': 'alphabet',
         'name': 'الحروف',
-        'icon': 'abc',
-        'color_hex': '#4285F4',
         'sort_order': 1,
         'units': 2,
         'lessons': 18,
@@ -280,7 +278,6 @@ void main() {
       final s = AdminSubjectStat.fromJson({'id': 'x', 'name': 'X'});
       expect(s.questionTypes, isEmpty);
       expect(s.lessonsDetail, isEmpty);
-      expect(s.colorHex, isNull);
     });
   });
 

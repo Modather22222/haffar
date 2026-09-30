@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../design_system/colors.dart';
 import '../../models/admin_stats.dart';
+import '../../models/subject.dart';
 import '../../services/admin_repository.dart';
 import '../../utils/routes.dart';
 import 'admin_widgets.dart';
@@ -233,13 +234,14 @@ class _SubjectCard extends StatelessWidget {
     Color(0xFF6366F1),
   ];
 
+  /// Deterministic accent per subject id — subjects have no stored colour,
+  /// so bars/dots pick one from the chart palette by hashing the id.
   Color get _accent {
-    final hex = stat.colorHex;
-    if (hex != null && hex.length == 7 && hex.startsWith('#')) {
-      final value = int.tryParse(hex.substring(1), radix: 16);
-      if (value != null) return Color(0xFF00000000 | value);
+    var hash = 0;
+    for (final unit in stat.id.codeUnits) {
+      hash = (hash * 31 + unit) & 0x7FFFFFFF;
     }
-    return HaffarColors.primary;
+    return _pieColors[hash % _pieColors.length];
   }
 
   @override
@@ -250,18 +252,26 @@ class _SubjectCard extends StatelessWidget {
     for (final l in stat.lessonsDetail) {
       if (l.completedBy > maxLesson) maxLesson = l.completedBy;
     }
+    final imageAsset = Subject.imageAssetFor(stat.id);
     return AdminSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: _accent,
-                  shape: BoxShape.circle,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: imageAsset != null
+                      ? Image.asset(imageAsset, fit: BoxFit.cover)
+                      : DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: _accent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 8),

@@ -190,10 +190,11 @@ class _SubjectRow extends StatelessWidget {
                 width: 56,
                 height: 56,
                 color: HaffarColors.primary,
-                child: Center(
-                  child: Text(
-                    subject.icon,
-                    style: const TextStyle(fontSize: 24),
+                child: const Center(
+                  child: Icon(
+                    Icons.menu_book_outlined,
+                    size: 26,
+                    color: Colors.white,
                   ),
                 ),
               ),
