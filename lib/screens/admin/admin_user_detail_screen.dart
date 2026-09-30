@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../design_system/colors.dart';
 import '../../models/admin_stats.dart';
+import '../../providers/content_provider.dart';
 import '../../services/admin_repository.dart';
 import '../../utils/app_toast.dart';
 import 'admin_push_dialog.dart';
@@ -277,6 +279,8 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
               const SizedBox(height: 12),
               _statsCard(d),
               const SizedBox(height: 12),
+              _onboardingCard(d),
+              const SizedBox(height: 12),
               _actionsCard(),
               const SizedBox(height: 12),
               _subjectsCard(d),
@@ -318,6 +322,12 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
       onPressed: () => Navigator.of(context).maybePop(),
     ),
   );
+
+  /// "school • state" — both collected during onboarding.
+  String _schoolState(AdminUserRow p) => [
+    p.schoolName.trim(),
+    p.fromState.trim(),
+  ].where((s) => s.isNotEmpty).join(' • ');
 
   Widget _headerCard(AdminUserDetail d) {
     final p = d.profile;
@@ -365,6 +375,19 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                     color: HaffarColors.grey2,
                   ),
                 ),
+                if (_schoolState(p).isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    _schoolState(p),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: kAdminFont,
+                      fontSize: 12,
+                      color: HaffarColors.grey2,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 4),
                 Text(
                   'انضم ${DateFormat('yyyy/MM/dd').format(p.createdAt)}',
@@ -444,6 +467,81 @@ class _AdminUserDetailScreenState extends State<AdminUserDetailScreen> {
                       fontFamily: kAdminFont,
                       fontSize: 9,
                       color: HaffarColors.grey2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Everything collected during onboarding (screens 4-15) in one card.
+  Widget _onboardingCard(AdminUserDetail d) {
+    final p = d.profile;
+    final subjects = context.read<ContentProvider>().subjects;
+    String nameOf(String id) {
+      for (final s in subjects) {
+        if (s.id == id) return s.name;
+      }
+      return id;
+    }
+
+    final rows = <(String, String)>[
+      ('المدرسة', p.schoolName),
+      ('الولاية', p.fromState),
+      (
+        'الجنس',
+        switch (p.gender) {
+          'male' => 'طالب',
+          'female' => 'طالبة',
+          _ => '',
+        },
+      ),
+      ('سمع عن حفار عبر', p.referralSource),
+      ('الدرجة المستهدفة في الشهادة', p.targetScore?.toString() ?? ''),
+      (
+        'الخطة المختارة',
+        switch (p.planChoice) {
+          'pro' => 'حفار برو',
+          'free' => 'تعلم مجانا',
+          _ => '',
+        },
+      ),
+      ('المواد الضعيفة', p.weakSubjectIds.map(nameOf).join('، ')),
+    ];
+
+    return AdminSectionCard(
+      title: 'بيانات المستخدم',
+      child: Column(
+        children: [
+          for (final (label, value) in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 150,
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 12,
+                        color: HaffarColors.grey2,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      value.trim().isEmpty ? '—' : value,
+                      style: const TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: HaffarColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],

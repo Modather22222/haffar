@@ -12,6 +12,11 @@ class LocalPrefs {
   static const _kSelectedSubjectIds = 'selectedSubjectIds';
   static const _kUserName = 'userName';
   static const _kGender = 'gender';
+  static const _kSchoolName = 'schoolName';
+  static const _kFromState = 'fromState';
+  static const _kReferralSource = 'referralSource';
+  static const _kTargetScore = 'targetScore';
+  static const _kPlanChoice = 'planChoice';
   static const _kNotifications = 'notificationsEnabled';
   static const _kPendingLessonKeys = 'pendingLessonKeys';
   static const _kPendingUnitKeys = 'pendingUnitKeys';
@@ -96,6 +101,22 @@ class LocalPrefs {
   static Future<void> writeUserName(String? v) => setString(_kUserName, v);
   static Future<String?> readGender() => getString(_kGender);
   static Future<void> writeGender(String? v) => setString(_kGender, v);
+  static Future<String?> readSchoolName() => getString(_kSchoolName);
+  static Future<void> writeSchoolName(String? v) => setString(_kSchoolName, v);
+  static Future<String?> readFromState() => getString(_kFromState);
+  static Future<void> writeFromState(String? v) => setString(_kFromState, v);
+  static Future<String?> readReferralSource() => getString(_kReferralSource);
+  static Future<void> writeReferralSource(String? v) =>
+      setString(_kReferralSource, v);
+  static Future<int?> readTargetScore() async {
+    final v = await getString(_kTargetScore);
+    return v == null ? null : int.tryParse(v);
+  }
+
+  static Future<void> writeTargetScore(int? v) =>
+      setString(_kTargetScore, v?.toString());
+  static Future<String?> readPlanChoice() => getString(_kPlanChoice);
+  static Future<void> writePlanChoice(String? v) => setString(_kPlanChoice, v);
   static Future<bool> readNotifications() => getBool(_kNotifications);
   static Future<void> writeNotifications(bool v) => setBool(_kNotifications, v);
 

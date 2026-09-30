@@ -265,6 +265,12 @@ class _UserTile extends StatelessWidget {
     return name[0];
   }
 
+  /// "school • state" — both collected during onboarding.
+  String get _detail => [
+    user.schoolName.trim(),
+    user.fromState.trim(),
+  ].where((s) => s.isNotEmpty).join(' • ');
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -342,6 +348,19 @@ class _UserTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       user.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 12,
+                        color: HaffarColors.grey2,
+                      ),
+                    ),
+                  ],
+                  if (_detail.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _detail,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(

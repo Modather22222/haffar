@@ -8,10 +8,11 @@ import '../utils/app_toast.dart';
 import '../utils/local_prefs.dart';
 
 /// Lesson/unit completions, unlock gates, onboarding flags, display name.
-/// Owns the only client-writable profile field (display_name via RPC).
+/// Owns the client-writable profile fields (all pushed through
+/// update_own_profile — profiles UPDATE is revoked).
 class ProgressProvider extends ChangeNotifier {
   ProgressRepository? _progressRepo;
-  Timer? _nameSaveTimer;
+  Timer? _profileSaveTimer;
   bool remoteSyncEnabled = false;
 
   // ── Identity / flags ─────────────────────────────────────────────────────
@@ -19,6 +20,14 @@ class ProgressProvider extends ChangeNotifier {
 
   /// 'male' | 'female' — set during onboarding gender step.
   String? gender;
+
+  /// Collected during onboarding before the account exists — kept locally,
+  /// pushed to profiles via update_own_profile (screens 4-12).
+  String schoolName = '';
+  String fromState = '';
+  String referralSource = '';
+  int? targetScore;
+  String planChoice = '';
   bool hasCompletedOnboarding = false;
   bool hasLoggedIn = false;
   bool notificationsEnabled = false;
@@ -58,6 +67,11 @@ class ProgressProvider extends ChangeNotifier {
       final name = await LocalPrefs.readUserName();
       if (name != null && name.isNotEmpty) userName = name;
       gender = await LocalPrefs.readGender();
+      schoolName = await LocalPrefs.readSchoolName() ?? '';
+      fromState = await LocalPrefs.readFromState() ?? '';
+      referralSource = await LocalPrefs.readReferralSource() ?? '';
+      targetScore = await LocalPrefs.readTargetScore();
+      planChoice = await LocalPrefs.readPlanChoice() ?? '';
       notificationsEnabled = await LocalPrefs.readNotifications();
       _pendingLessonKeys
         ..clear()
@@ -138,6 +152,55 @@ class ProgressProvider extends ChangeNotifier {
     if (name != null && name.isNotEmpty && name != 'البطل') {
       userName = name;
       unawaited(LocalPrefs.writeUserName(name));
+    }
+    // Server wins only when it actually has a value — otherwise keep the
+    // local onboarding answers collected before login.
+    final school = profile?['school_name'] as String?;
+    if (school != null && school.isNotEmpty) {
+      schoolName = school;
+      unawaited(LocalPrefs.writeSchoolName(school));
+    }
+    final state = profile?['from_state'] as String?;
+    if (state != null && state.isNotEmpty) {
+      fromState = state;
+      unawaited(LocalPrefs.writeFromState(state));
+    }
+    final referral = profile?['referral_source'] as String?;
+    if (referral != null && referral.isNotEmpty) {
+      referralSource = referral;
+      unawaited(LocalPrefs.writeReferralSource(referral));
+    }
+    final score = (profile?['target_score'] as num?)?.toInt();
+    if (score != null) {
+      targetScore = score;
+      unawaited(LocalPrefs.writeTargetScore(score));
+    }
+    final plan = profile?['plan_choice'] as String?;
+    if (plan != null && plan.isNotEmpty) {
+      planChoice = plan;
+      unawaited(LocalPrefs.writePlanChoice(plan));
+    }
+    final serverGender = profile?['gender'] as String?;
+    if (serverGender != null && serverGender.isNotEmpty) {
+      gender = serverGender;
+      unawaited(LocalPrefs.writeGender(serverGender));
+    }
+    final subjects = (profile?['weak_subject_ids'] as List<dynamic>?)
+        ?.cast<String>();
+    if (subjects != null && subjects.isNotEmpty) {
+      selectedSubjectIds
+        ..clear()
+        ..addAll(subjects);
+      unawaited(LocalPrefs.writeSelectedSubjectIds(subjects));
+    }
+    if (profile?['notifications_enabled'] == true && !notificationsEnabled) {
+      notificationsEnabled = true;
+      unawaited(LocalPrefs.writeNotifications(true));
+    }
+    if (profile?['has_completed_onboarding'] == true &&
+        !hasCompletedOnboarding) {
+      hasCompletedOnboarding = true;
+      unawaited(LocalPrefs.writeOnboarded(true));
     }
     _completedSubjectLessons
       ..clear()
@@ -233,6 +296,42 @@ class ProgressProvider extends ChangeNotifier {
   void setGender(String value) {
     gender = value;
     unawaited(LocalPrefs.writeGender(value));
+    _scheduleProfileSave();
+    notifyListeners();
+  }
+
+  void setSchoolName(String value) {
+    schoolName = value.trim();
+    unawaited(LocalPrefs.writeSchoolName(schoolName));
+    _scheduleProfileSave();
+    notifyListeners();
+  }
+
+  void setFromState(String value) {
+    fromState = value.trim();
+    unawaited(LocalPrefs.writeFromState(fromState));
+    _scheduleProfileSave();
+    notifyListeners();
+  }
+
+  void setReferralSource(String value) {
+    referralSource = value.trim();
+    unawaited(LocalPrefs.writeReferralSource(referralSource));
+    _scheduleProfileSave();
+    notifyListeners();
+  }
+
+  void setTargetScore(int value) {
+    targetScore = value;
+    unawaited(LocalPrefs.writeTargetScore(value));
+    _scheduleProfileSave();
+    notifyListeners();
+  }
+
+  void setPlanChoice(String value) {
+    planChoice = value;
+    unawaited(LocalPrefs.writePlanChoice(value));
+    _scheduleProfileSave();
     notifyListeners();
   }
 
@@ -241,19 +340,23 @@ class ProgressProvider extends ChangeNotifier {
     hasLoggedIn = true;
     unawaited(LocalPrefs.writeUserName(name));
     unawaited(LocalPrefs.writeLoggedIn(true));
-    _scheduleNameSave();
+    _scheduleProfileSave();
     notifyListeners();
   }
 
   void completeOnboarding() {
     hasCompletedOnboarding = true;
     unawaited(LocalPrefs.writeOnboarded(true));
+    _scheduleProfileSave();
     notifyListeners();
   }
 
-  void enableNotifications() {
-    notificationsEnabled = true;
-    unawaited(LocalPrefs.writeNotifications(true));
+  void enableNotifications() => setNotificationsEnabled(true);
+
+  void setNotificationsEnabled(bool value) {
+    notificationsEnabled = value;
+    unawaited(LocalPrefs.writeNotifications(value));
+    _scheduleProfileSave();
     notifyListeners();
   }
 
@@ -270,6 +373,7 @@ class ProgressProvider extends ChangeNotifier {
       selectedSubjectIds.add(id);
     }
     unawaited(LocalPrefs.writeSelectedSubjectIds(selectedSubjectIds.toList()));
+    _scheduleProfileSave();
     notifyListeners();
   }
 
@@ -308,21 +412,36 @@ class ProgressProvider extends ChangeNotifier {
     });
   }
 
-  void _scheduleNameSave() {
+  /// Debounced push of every onboarding field through update_own_profile.
+  /// No-ops before login — the values stay local until the first [login].
+  void _scheduleProfileSave() {
     if (!remoteSyncEnabled || _progressRepo == null) return;
-    _nameSaveTimer?.cancel();
-    _nameSaveTimer = Timer(const Duration(milliseconds: 1500), () {
+    _profileSaveTimer?.cancel();
+    _profileSaveTimer = Timer(const Duration(milliseconds: 1500), () {
       _sync(
-        () => _progressRepo!.saveProfile(displayName: userName),
+        () => _progressRepo!.saveProfile(
+          displayName: userName,
+          schoolName: schoolName.isEmpty ? null : schoolName,
+          fromState: fromState.isEmpty ? null : fromState,
+          referralSource: referralSource.isEmpty ? null : referralSource,
+          targetScore: targetScore,
+          planChoice: planChoice.isEmpty ? null : planChoice,
+          gender: gender,
+          weakSubjectIds: selectedSubjectIds.isEmpty
+              ? null
+              : selectedSubjectIds.toList(),
+          notificationsEnabled: notificationsEnabled,
+          hasCompletedOnboarding: hasCompletedOnboarding,
+        ),
         userVisible: true,
-        failMessage: 'تعذر حفظ اسمك على الخادم',
+        failMessage: 'تعذر حفظ بياناتك على الخادم',
       );
     });
   }
 
   @override
   void dispose() {
-    _nameSaveTimer?.cancel();
+    _profileSaveTimer?.cancel();
     super.dispose();
   }
 }

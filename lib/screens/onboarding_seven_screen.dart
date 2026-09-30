@@ -69,7 +69,7 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
         );
       }
     } else {
-      context.read<ProgressProvider>().enableNotifications();
+      context.read<ProgressProvider>().setNotificationsEnabled(false);
     }
   }
 
@@ -248,6 +248,9 @@ class _OnboardingSevenScreenState extends State<OnboardingSevenScreen> {
                                 );
                                 return;
                               }
+                              context.read<ProgressProvider>().setTargetScore(
+                                n,
+                              );
                               context.push(Routes.onboardingEight);
                             }
                           : null,

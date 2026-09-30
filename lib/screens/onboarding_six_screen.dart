@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
+import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 
 class OnboardingSixScreen extends StatefulWidget {
@@ -109,7 +111,12 @@ class _OnboardingSixScreenState extends State<OnboardingSixScreen> {
                       label: 'استمر',
                       onPressed: _selectedSource == null
                           ? null
-                          : () => context.push(Routes.onboardingSeven),
+                          : () {
+                              context
+                                  .read<ProgressProvider>()
+                                  .setReferralSource(_selectedSource!);
+                              context.push(Routes.onboardingSeven);
+                            },
                     ),
                   ),
                 ),

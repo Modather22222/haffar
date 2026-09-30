@@ -3,6 +3,7 @@ import '../services/xp_repository.dart';
 import '../utils/app_error.dart';
 import '../utils/routes.dart';
 import '../widgets/league_countdown.dart';
+import '../widgets/pro_badge.dart';
 import '../widgets/xp_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -197,6 +198,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         final isCurrent = entry['is_current_user'] == true;
         final medal = rank <= 3 ? _medals[rank - 1] : null;
 
+        // School • state subtitle under the name (both set during onboarding).
+        final detail = [
+          (entry['school_name'] as String?) ?? '',
+          (entry['from_state'] as String?) ?? '',
+        ].where((s) => s.trim().isNotEmpty).join(' • ');
+
         // Top 3 get medal-tinted rows; "you" keeps the primary border.
         var bg = isCurrent
             ? HaffarColors.primary.withValues(alpha: 0.1)
@@ -258,15 +265,40 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    entry['display_name'] as String? ?? 'البطل',
-                    style: const TextStyle(
-                      fontFamily: 'BeVietnamPro',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry['display_name'] as String? ?? 'البطل',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'BeVietnamPro',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (detail.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          detail,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'BeVietnamPro',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: HaffarColors.outline,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
+                if (entry['is_subscribed'] == true) ...[
+                  const SizedBox(width: 6),
+                  const ProBadge(fontSize: 10),
+                  const SizedBox(width: 10),
+                ],
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

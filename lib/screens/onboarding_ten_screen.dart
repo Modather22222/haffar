@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
+import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 
 class OnboardingTenScreen extends StatefulWidget {
@@ -91,7 +93,7 @@ class _OnboardingTenScreenState extends State<OnboardingTenScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'سوبر حفار',
+                                    'حفار برو',
                                     style: const TextStyle(
                                       fontFamily: 'DIN2014Rounded',
                                       fontSize: 17,
@@ -197,7 +199,12 @@ class _OnboardingTenScreenState extends State<OnboardingTenScreen> {
                       label: 'استمر',
                       onPressed: _selectedIndex == null
                           ? null
-                          : () => context.push(Routes.onboardingTwelve),
+                          : () {
+                              context.read<ProgressProvider>().setPlanChoice(
+                                _selectedIndex == 0 ? 'pro' : 'free',
+                              );
+                              context.push(Routes.onboardingTwelve);
+                            },
                     ),
                   ),
                 ),

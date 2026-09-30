@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
+import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 
 class OnboardingFiveScreen extends StatefulWidget {
@@ -164,7 +166,12 @@ class _OnboardingFiveScreenState extends State<OnboardingFiveScreen> {
                           : HaffarPrimaryButtonState.disabled,
                       label: 'استمر',
                       onPressed: _selectedState != null
-                          ? () => context.push(Routes.onboardingSix)
+                          ? () {
+                              context.read<ProgressProvider>().setFromState(
+                                _selectedState!,
+                              );
+                              context.push(Routes.onboardingSix);
+                            }
                           : null,
                     ),
                   ),

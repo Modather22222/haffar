@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
 import '../design_system/components/lesson/voice_bubble.dart';
 import '../design_system/components/progress_bar_ring.dart';
+import '../providers/progress_provider.dart';
 import '../utils/routes.dart';
 
 class OnboardingEightScreen extends StatefulWidget {
@@ -122,7 +124,12 @@ class _OnboardingEightScreenState extends State<OnboardingEightScreen> {
                           : HaffarPrimaryButtonState.disabled,
                       label: 'استمر',
                       onPressed: _displayText.isNotEmpty
-                          ? () => context.push(Routes.onboardingNine)
+                          ? () {
+                              context.read<ProgressProvider>().setSchoolName(
+                                _controller.text,
+                              );
+                              context.push(Routes.onboardingNine);
+                            }
                           : null,
                     ),
                   ),

@@ -116,6 +116,15 @@ class AdminUserRow {
   final DateTime? lastStreakDate;
   final DateTime? lastActiveAt;
   final int lessonsDone;
+  final String schoolName;
+  final String fromState;
+  final String referralSource;
+  final int? targetScore;
+  final String planChoice;
+  final String gender;
+  final List<String> weakSubjectIds;
+  final bool notificationsEnabled;
+  final bool hasCompletedOnboarding;
 
   const AdminUserRow({
     required this.id,
@@ -132,6 +141,15 @@ class AdminUserRow {
     required this.lastStreakDate,
     required this.lessonsDone,
     this.lastActiveAt,
+    this.schoolName = '',
+    this.fromState = '',
+    this.referralSource = '',
+    this.targetScore,
+    this.planChoice = '',
+    this.gender = '',
+    this.weakSubjectIds = const [],
+    this.notificationsEnabled = false,
+    this.hasCompletedOnboarding = false,
   });
 
   factory AdminUserRow.fromJson(Map<String, dynamic> json) => AdminUserRow(
@@ -155,6 +173,19 @@ class AdminUserRow {
         ? null
         : DateTime.tryParse(json['last_active_at'] as String),
     lessonsDone: (json['lessons_done'] as num?)?.toInt() ?? 0,
+    schoolName: (json['school_name'] as String?) ?? '',
+    fromState: (json['from_state'] as String?) ?? '',
+    referralSource: (json['referral_source'] as String?) ?? '',
+    targetScore: (json['target_score'] as num?)?.toInt(),
+    planChoice: (json['plan_choice'] as String?) ?? '',
+    gender: (json['gender'] as String?) ?? '',
+    weakSubjectIds: [
+      for (final s in (json['weak_subject_ids'] as List<dynamic>? ?? const []))
+        s.toString(),
+    ],
+    notificationsEnabled: (json['notifications_enabled'] as bool?) ?? false,
+    hasCompletedOnboarding:
+        (json['has_completed_onboarding'] as bool?) ?? false,
   );
 }
 

@@ -17,13 +17,36 @@ class ProgressRepository {
   }
 
   /// NOTE: hearts/xp/streak/gems/league are owned by server RPCs — clients may
-  /// only set display_name via update_own_profile (profiles UPDATE is revoked).
-  Future<void> saveProfile({required String displayName}) async {
+  /// only set onboarding identity fields via update_own_profile (profiles
+  /// UPDATE is revoked). Null/empty values keep the stored value.
+  Future<void> saveProfile({
+    required String displayName,
+    String? schoolName,
+    String? fromState,
+    String? referralSource,
+    int? targetScore,
+    String? planChoice,
+    String? gender,
+    List<String>? weakSubjectIds,
+    bool? notificationsEnabled,
+    bool? hasCompletedOnboarding,
+  }) async {
     final uid = _uid;
     if (uid == null) return;
     await _client.rpc(
       'update_own_profile',
-      params: {'p_display_name': displayName},
+      params: {
+        'p_display_name': displayName,
+        'p_school_name': schoolName,
+        'p_from_state': fromState,
+        'p_referral_source': referralSource,
+        'p_target_score': targetScore,
+        'p_plan_choice': planChoice,
+        'p_gender': gender,
+        'p_weak_subject_ids': weakSubjectIds,
+        'p_notifications_enabled': notificationsEnabled,
+        'p_has_completed_onboarding': hasCompletedOnboarding,
+      },
     );
   }
 
