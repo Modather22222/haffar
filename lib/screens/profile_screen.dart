@@ -243,25 +243,6 @@ class _ProfileBodyState extends State<_ProfileBody> {
           ),
           const SizedBox(height: 12),
           _bannerGrid(context),
-          const SizedBox(height: 20),
-          const Text(
-            'الشارات',
-            style: TextStyle(
-              fontFamily: 'BeVietnamPro',
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              color: HaffarColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _achievementBadge(Icons.military_tech, 'المبتدئ', '1/3'),
-              _achievementBadge(Icons.workspace_premium, 'المثابر', '2/5'),
-            ],
-          ),
         ],
       ),
     );
@@ -458,41 +439,6 @@ class _ProfileBodyState extends State<_ProfileBody> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _achievementBadge(IconData icon, String label, String progress) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: HaffarColors.primary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 32, color: HaffarColors.primary),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'BeVietnamPro',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: HaffarColors.textPrimary,
-            ),
-          ),
-          Text(
-            progress,
-            style: const TextStyle(
-              fontFamily: 'PlusJakartaSans',
-              fontSize: 10,
-              color: HaffarColors.outline,
-            ),
-          ),
-        ],
       ),
     );
   }
