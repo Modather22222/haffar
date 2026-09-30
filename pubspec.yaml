@@ -41,6 +41,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+# Launcher icons for all devices — generated with:
+#   dart run flutter_launcher_icons
+# Source artwork lives in assets/app_icon/ (not bundled as an app asset).
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon/ios/AppIcon~ios-marketing.png"
+  remove_alpha_ios: true
+  # Android adaptive icon: brand-orange background + exported artwork
+  # (foreground art is pre-padded to 66%, so inset stays low).
+  adaptive_icon_background: "#FD7202"
+  adaptive_icon_foreground: "assets/app_icon/android/res/mipmap-xxxhdpi/ic_launcher_foreground.png"
+  adaptive_icon_foreground_inset: 8
+  adaptive_icon_monochrome: "assets/app_icon/android/res/mipmap-xxxhdpi/ic_launcher_monochrome.png"
 
 flutter:
   uses-material-design: true
