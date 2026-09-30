@@ -11,11 +11,17 @@ class ContentRepository {
   ContentRepository(this._client);
 
   Future<List<Subject>> fetchSubjects() async {
+    // NOTE: postgrest-dart's .order() defaults to DESCENDING — always pass
+    // ascending: true for display order, otherwise e.g. sort_order=8 (English)
+    // renders first.
     final subjectRows = await _client
         .from('subjects')
         .select()
-        .order('sort_order');
-    final unitRows = await _client.from('units').select().order('unit_index');
+        .order('sort_order', ascending: true);
+    final unitRows = await _client
+        .from('units')
+        .select()
+        .order('unit_index', ascending: true);
     final unitsBySubject = <String, List<Unit>>{};
     for (final row in unitRows) {
       final unit = Unit.fromMap(row);
@@ -36,13 +42,16 @@ class ContentRepository {
   Future<List<Lesson>> fetchLessons({bool publishedOnly = false}) async {
     final query = _client.from('lessons').select();
     final rows = await (publishedOnly ? query.eq('published', true) : query)
-        .order('unit_index')
-        .order('position');
+        .order('unit_index', ascending: true)
+        .order('position', ascending: true);
     return rows.map(Lesson.fromMap).toList();
   }
 
   Future<List<Question>> fetchQuestions() async {
-    final rows = await _client.from('questions').select().order('sort_order');
+    final rows = await _client
+        .from('questions')
+        .select()
+        .order('sort_order', ascending: true);
     return rows.map(Question.fromMap).toList();
   }
 }
