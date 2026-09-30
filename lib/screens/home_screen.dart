@@ -12,6 +12,7 @@ import '../design_system/colors.dart';
 import '../models/subject.dart';
 import '../utils/game_constants.dart';
 import '../utils/routes.dart';
+import '../widgets/pro_badge.dart';
 import '../widgets/xp_icon.dart';
 import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
@@ -384,34 +385,42 @@ class _HomeTab extends StatelessWidget {
   }
 
   Widget _statChipHeart(EconomyProvider economy) {
-    // Subscribers have unlimited hearts — show ∞ with no regen countdown.
+    // Subscribers have unlimited hearts — show ∞ with no regen countdown,
+    // with the حفار برو badge in the slot the countdown would occupy.
     if (economy.isSubscribed) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: HaffarColors.surfaceHigh,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SvgPicture.asset(
-              'assets/icons/heart_small.svg',
-              width: 16,
-              height: 16,
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: HaffarColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 4),
-            const Text(
-              '∞',
-              style: TextStyle(
-                fontFamily: 'BeVietnamPro',
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: HaffarColors.textPrimary,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  'assets/icons/heart_small.svg',
+                  width: 16,
+                  height: 16,
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  '∞',
+                  style: TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: HaffarColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 3),
+          const ProBadge(fontSize: 10),
+        ],
       );
     }
     final hearts = economy.hearts;

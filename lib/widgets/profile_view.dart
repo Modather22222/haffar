@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../design_system/colors.dart';
 import '../services/banner_repository.dart';
+import 'pro_badge.dart';
 import 'xp_icon.dart';
 
 /// Shared profile header: achievement banner, overlapping avatar, name,
@@ -19,6 +20,9 @@ class ProfileView extends StatelessWidget {
   final Widget Function(BuildContext context)? trailing;
   final String? avatarInitial;
 
+  /// Shows the حفار برو pill under the name (subscribed users only).
+  final bool showProBadge;
+
   const ProfileView({
     super.key,
     required this.displayName,
@@ -30,6 +34,7 @@ class ProfileView extends StatelessWidget {
     required this.bannerAsset,
     this.trailing,
     this.avatarInitial,
+    this.showProBadge = false,
   });
 
   String get _initial {
@@ -103,6 +108,7 @@ class ProfileView extends StatelessWidget {
             color: HaffarColors.textPrimary,
           ),
         ),
+        if (showProBadge) ...[const SizedBox(height: 6), const ProBadge()],
         if (subtitle != null) ...[
           const SizedBox(height: 4),
           Text(

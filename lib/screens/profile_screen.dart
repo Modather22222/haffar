@@ -146,6 +146,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         bannerAsset:
             BannerRepository.assets[economy.selectedBanner] ??
             _selectedBannerAsset(economy.streak, progress.completedLessons),
+        showProBadge: economy.isSubscribed,
         trailing: (ctx) => _trailingSection(ctx),
       ),
     );
