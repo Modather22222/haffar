@@ -1,0 +1,13 @@
+-- Fix signed-out content loading (stuck subject spinner + permission error).
+--
+-- lessons_public_read (role public, i.e. incl. anon) calls fn_is_admin() in
+-- its qual, but EXECUTE on fn_is_admin() was revoked from anon by the admin
+-- hardening migrations (20260925130000 / 20260925190000). Every anonymous
+-- lessons SELECT therefore fails with 42501 "permission denied for function
+-- fn_is_admin", which aborts ContentProvider.loadContent() (Future.wait over
+-- subjects + lessons + questions) on every fresh install / signed-out session.
+--
+-- Safe to grant: fn_is_admin() is SECURITY INVOKER, reads only
+-- profiles via auth.uid(), and returns false for anon (RLS on profiles hides
+-- all rows) — it reveals nothing that "not signed in" doesn't already say.
+grant execute on function public.fn_is_admin() to anon;
