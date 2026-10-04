@@ -79,6 +79,19 @@ class SettingsScreen extends StatelessWidget {
             ),
             _tile(Icons.language, 'اللغة', 'العربية'),
             _tile(Icons.palette, 'المظهر', 'فاتح'),
+            const SizedBox(height: 16),
+            _tile(
+              Icons.privacy_tip,
+              'سياسة الخصوصية',
+              'كيف نجمع بياناتك ونحميها',
+              onTap: () => context.push(Routes.privacy),
+            ),
+            _tile(
+              Icons.description,
+              'شروط الاستخدام',
+              'قواعد استخدام التطبيق واشتراكه',
+              onTap: () => context.push(Routes.terms),
+            ),
             const SizedBox(height: 24),
             _tile(
               Icons.logout,

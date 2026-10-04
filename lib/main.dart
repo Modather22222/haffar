@@ -33,6 +33,8 @@ import 'screens/question_screen.dart';
 import 'screens/feedback_screen.dart';
 import 'screens/achievements_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/privacy_screen.dart';
+import 'screens/terms_screen.dart';
 import 'screens/subscription_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
@@ -438,6 +440,8 @@ final GoRouter router = GoRouter(
       builder: (_, _) => const AchievementsScreen(),
     ),
     GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+    GoRoute(path: Routes.privacy, builder: (_, _) => const PrivacyScreen()),
+    GoRoute(path: Routes.terms, builder: (_, _) => const TermsScreen()),
     GoRoute(
       path: Routes.subscription,
       builder: (_, _) => const SubscriptionScreen(),

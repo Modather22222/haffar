@@ -16,6 +16,8 @@ abstract class Routes {
   static const achievements = '/achievements';
   static const profile = '/profile';
   static const settings = '/settings';
+  static const privacy = '/privacy';
+  static const terms = '/terms';
   static const signingIn = '/signing-in';
   static const units = '/units';
   static const lessonDetail = '/lesson-detail';

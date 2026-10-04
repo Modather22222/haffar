@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../design_system/colors.dart';
 import '../design_system/components/buttons/button_general_primary.dart';
@@ -27,6 +28,7 @@ class _OnboardingFourteenScreenState extends State<OnboardingFourteenScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _loading = false;
+  bool _termsAccepted = false;
   String? _error;
   bool _awaitingConfirmation = false;
 
@@ -41,7 +43,13 @@ class _OnboardingFourteenScreenState extends State<OnboardingFourteenScreen> {
     r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
   ).hasMatch(_emailController.text.trim());
   bool get _passwordValid => _passwordController.text.length >= 8;
-  bool get _canSubmit => _emailValid && _passwordValid && !_loading;
+  bool get _canSubmit =>
+      _emailValid && _passwordValid && _termsAccepted && !_loading;
+
+  Future<void> _openTermsUrl() async {
+    final uri = Uri.parse('https://sites.google.com/view/haffar-privacy/');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
   Future<void> _signUp() async {
     if (!_canSubmit) return;
@@ -257,6 +265,57 @@ class _OnboardingFourteenScreenState extends State<OnboardingFourteenScreen> {
                             ),
                           ),
                         ],
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 48,
+                              child: Checkbox(
+                                value: _termsAccepted,
+                                activeColor: HaffarColors.primary,
+                                onChanged: (value) => setState(
+                                  () => _termsAccepted = value ?? false,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  const Text(
+                                    'أوافق على',
+                                    style: TextStyle(
+                                      fontFamily: 'DIN2014Rounded',
+                                      fontSize: 14,
+                                      color: HaffarColors.grey1,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    onPressed: _openTermsUrl,
+                                    child: const Text(
+                                      'الشروط والأحكام وسياسة الخصوصية',
+                                      style: TextStyle(
+                                        fontFamily: 'DIN2014Rounded',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: HaffarColors.primaryDark,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 24),
                         TextButton(
                           onPressed: () => context.push(Routes.signIn),
