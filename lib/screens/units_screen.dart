@@ -119,69 +119,57 @@ class UnitsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Unit header
-                  InkWell(
-                    onTap: () => context.push(
-                      '${Routes.lessonPath}?subject=$subjectId&unit=${unit.index}',
-                    ),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: const BoxDecoration(
-                              color: HaffarColors.primary,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isCompleted ? Icons.check : Icons.book,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  unit.title,
-                                  style: const TextStyle(
-                                    fontFamily: 'BeVietnamPro',
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  Unit.lessonsCountLabel(unitLessons.length),
-                                  style: const TextStyle(
-                                    fontFamily: 'PlusJakartaSans',
-                                    fontSize: 13,
-                                    color: HaffarColors.outline,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
+                  // Unit header — fully static now (the old /lesson-path screen
+                  // is gone; lessons are listed right below it).
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: const BoxDecoration(
                             color: HaffarColors.primary,
+                            shape: BoxShape.circle,
                           ),
-                        ],
-                      ),
+                          child: Icon(
+                            isCompleted ? Icons.check : Icons.book,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                unit.title,
+                                style: const TextStyle(
+                                  fontFamily: 'BeVietnamPro',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                Unit.lessonsCountLabel(unitLessons.length),
+                                style: const TextStyle(
+                                  fontFamily: 'PlusJakartaSans',
+                                  fontSize: 13,
+                                  color: HaffarColors.outline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   // Lessons list — all open, the user picks the order
                   ...[
                     const Divider(height: 1),
-                    ...unitLessons.asMap().entries.map((entry) {
-                      final lesson = entry.value;
+                    ...unitLessons.map((lesson) {
                       final lessonIndex = lesson.index;
                       final isLessonCompleted = progress
                           .isSubjectLessonCompleted(subjectId, lessonIndex);
@@ -220,7 +208,7 @@ class UnitsScreen extends StatelessWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'درس ${Unit.toArabicNumeral(entry.key + 1)}',
+                                  lesson.title,
                                   style: const TextStyle(
                                     fontFamily: 'BeVietnamPro',
                                     fontSize: 14,

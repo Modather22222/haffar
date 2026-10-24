@@ -40,12 +40,15 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
   Object? _error;
   bool _saving = false;
   bool _uploading = false;
+  String? _lessonTitle;
 
   QuestionType _type = QuestionType.multipleChoice;
   final _textController = TextEditingController();
   final _passageController = TextEditingController();
   final _hintController = TextEditingController();
   final _addWordController = TextEditingController();
+  final _zoneOneController = TextEditingController();
+  final _zoneTwoController = TextEditingController();
   final List<TextEditingController> _optionControllers = [];
   List<String> _correctWords = [];
   List<String> _categories = [];
@@ -59,6 +62,7 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
   void initState() {
     super.initState();
     _admin = ContentAdminRepository(Supabase.instance.client);
+    _fetchLessonTitle();
     _optionControllers.addAll([
       TextEditingController(),
       TextEditingController(),
@@ -68,6 +72,8 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
       _textController,
       _passageController,
       _hintController,
+      _zoneOneController,
+      _zoneTwoController,
       ..._optionControllers,
     ]) {
       c.addListener(_onFormChanged);
@@ -86,6 +92,8 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
       _passageController,
       _hintController,
       _addWordController,
+      _zoneOneController,
+      _zoneTwoController,
       ..._optionControllers,
     ]) {
       c.dispose();
@@ -93,8 +101,37 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
     super.dispose();
   }
 
+  /// Lesson title for the preview label — cosmetic only, the ordinal is the
+  /// fallback ("درس N") when the lookup fails or content has gaps.
+  Future<void> _fetchLessonTitle() async {
+    try {
+      final title = await _admin.fetchLessonTitle(
+        widget.subjectId,
+        widget.lessonIndex,
+      );
+      if (mounted) setState(() => _lessonTitle = title);
+    } catch (_) {
+      // Cosmetic — keep the ordinal fallback.
+    }
+  }
+
   void _onFormChanged() {
     if (mounted) setState(() {});
+  }
+
+  /// Switching question type keeps the answer key representable for the
+  /// newly selected type (the per-type pickers can't show out-of-range values).
+  void _changeType(QuestionType? value) {
+    if (value == null || value == _type) return;
+    setState(() {
+      _type = value;
+      if (value == QuestionType.trueFalse) {
+        if (_correctIndex > 1) _correctIndex = 0;
+      } else if (typeUsesOptions(value.name) &&
+          _correctIndex >= _optionControllers.length) {
+        _correctIndex = 0;
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -120,6 +157,17 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
         _categories = List.filled(_optionControllers.length, '0');
       }
       _correctIndex = q.correctIndex;
+      // Normalize impossible keys so the per-type answer pickers stay valid.
+      if (q.type == QuestionType.trueFalse && _correctIndex > 1) {
+        _correctIndex = 0;
+      }
+      // Category names ride in `correct_words` for classification.
+      if (q.type == QuestionType.classification &&
+          q.correctWords != null &&
+          q.correctWords!.length == 2) {
+        _zoneOneController.text = q.correctWords![0].trim();
+        _zoneTwoController.text = q.correctWords![1].trim();
+      }
       _xp = q.xpReward;
       _difficulty = q.difficulty;
       _imageUrl = q.imageUrl;
@@ -204,7 +252,51 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
     );
   }
 
-  List<String> get _options => [for (final c in _optionControllers) c.text];
+  /// Trimmed option texts — preview, storage and helpers all share the same
+  /// normalized values so index checks match what is saved.
+  List<String> get _options =>
+      [for (final c in _optionControllers) c.text.trim()];
+
+  /// Words written to `correct_words`: accepted answers for fillBlank, the
+  /// correct sequence for ordering, the two category names for
+  /// classification.
+  List<String> _savedCorrectWords() {
+    if (_type == QuestionType.classification) {
+      final one = _zoneOneController.text.trim();
+      final two = _zoneTwoController.text.trim();
+      return one.isEmpty || two.isEmpty ? const <String>[] : [one, two];
+    }
+    return typeUsesCorrectWords(_type.name) ? _correctWords : const <String>[];
+  }
+
+  List<String>? _previewCorrectWords() {
+    final words = _savedCorrectWords();
+    return words.isEmpty ? null : words;
+  }
+
+  /// Stored options: blank calculation option boxes are dropped so the
+  /// student widget falls back to free-entry mode instead of rendering
+  /// empty answer cards.
+  List<String> _storedOptions() {
+    if (!typeUsesOptions(_type.name)) return const <String>[];
+    if (_type != QuestionType.calculation) return _options;
+    return [for (final o in _options) if (o.isNotEmpty) o];
+  }
+
+  int _storedCorrectIndex(List<String> storedOptions) {
+    if (_type != QuestionType.calculation ||
+        storedOptions.isEmpty ||
+        storedOptions.length == _options.length) {
+      return _correctIndex;
+    }
+    // The key shifts left once per dropped blank option before it.
+    var mapped = _correctIndex;
+    for (var i = 0; i < _correctIndex && i < _options.length; i++) {
+      if (_options[i].isEmpty) mapped--;
+    }
+    if (mapped < 0 || mapped >= storedOptions.length) return 0;
+    return mapped;
+  }
 
   Question _previewQuestion() => Question(
     id: _existing?.id ?? 'preview',
@@ -218,9 +310,9 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
     hint: typeUsesHint(_type.name) && _hintController.text.isNotEmpty
         ? _hintController.text
         : null,
-    options: typeUsesOptions(_type.name) ? _options : const [],
-    correctIndex: _correctIndex,
-    correctWords: _correctWords.isEmpty ? null : _correctWords,
+    options: _storedOptions(),
+    correctIndex: _storedCorrectIndex(_storedOptions()),
+    correctWords: _previewCorrectWords(),
     itemCategories: _type == QuestionType.classification ? _categories : null,
     xpReward: _xp,
     imageUrl: _imageUrl,
@@ -230,7 +322,16 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
 
   Future<void> _save() async {
     if (_saving) return;
-    final options = _options;
+    if (_type == QuestionType.classification &&
+        (_zoneOneController.text.trim().isEmpty ||
+            _zoneTwoController.text.trim().isEmpty)) {
+      editorSnack(
+        context,
+        error: ArgumentError('اكتب اسماً لكل فئة من فئتي التصنيف'),
+      );
+      return;
+    }
+    final options = _storedOptions();
     final message = validateQuestion(
       type: _type.name,
       text: _textController.text,
@@ -251,7 +352,6 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
       return;
     }
     setState(() => _saving = true);
-    final keepOptions = typeUsesOptions(_type.name);
     final row = <String, dynamic>{
       'subject_id': widget.subjectId,
       'lesson_index': widget.lessonIndex,
@@ -265,11 +365,9 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
       'hint': typeUsesHint(_type.name) && _hintController.text.trim().isNotEmpty
           ? _hintController.text.trim()
           : null,
-      'options': keepOptions ? options : const <String>[],
-      'correct_index': _correctIndex,
-      'correct_words': typeUsesCorrectWords(_type.name)
-          ? _correctWords
-          : const <String>[],
+      'options': options,
+      'correct_index': _storedCorrectIndex(options),
+      'correct_words': _savedCorrectWords(),
       'item_categories': _type == QuestionType.classification
           ? _categories
           : const <String>[],
@@ -342,7 +440,7 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
                       child: Text(questionTypeLabel(t.name)),
                     ),
                 ],
-                onChanged: (v) => setState(() => _type = v ?? _type),
+                onChanged: (v) => _changeType(v),
               ),
             ),
             _section(
@@ -366,8 +464,23 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
                 'التلميح (اختياري)',
                 _multiline(_hintController, 'تلميح...'),
               ),
+            if (_type == QuestionType.trueFalse) _trueFalseSection(),
             if (typeUsesOptions(_type.name)) _optionsSection(),
             if (typeUsesCorrectWords(_type.name)) _correctWordsSection(),
+            if (_type == QuestionType.explanation ||
+                _type == QuestionType.composition)
+              _section(
+                'التصحيح',
+                Text(
+                  'هذا النوع يُصحّح تلقائياً: إجابة الطالب تُقبل عند كتابة 20 حرفاً '
+                  'أو أكثر — لا حاجة لتحديد الإجابة الصحيحة.',
+                  style: const TextStyle(
+                    fontFamily: kAdminFont,
+                    fontSize: 12,
+                    color: HaffarColors.textSecondary,
+                  ),
+                ),
+              ),
             _section(
               'الصورة',
               Column(
@@ -447,7 +560,7 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
                         fontFamily: kAdminFont,
                         fontSize: 14,
                       ),
-                      decoration: _inputDecoration('نقاط الخبرة'),
+                      decoration: _inputDecoration('نقاط الإجابة الصحيحة'),
                       onChanged: (v) =>
                           setState(() => _xp = int.tryParse(v) ?? 0),
                     ),
@@ -489,7 +602,9 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
                   question: _previewQuestion(),
                   subjectName: '',
                   lessonNumber: widget.lessonNumber,
-                  customTitle: 'معاينة — درس ${widget.lessonNumber}',
+                  customTitle: _lessonTitle == null
+                      ? 'معاينة — درس ${widget.lessonNumber}'
+                      : 'معاينة — $_lessonTitle',
                   onBack: () {},
                   onSkip: () {},
                   onNext: () {},
@@ -587,9 +702,12 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
     final showCategories = _type == QuestionType.classification;
     final hint = switch (_type) {
       QuestionType.matching =>
-        'العمود الأول: أول نصف — العمود الثاني: ثاني نصف',
+        'العمود الأول: أول نصف — العمود الثاني: ثاني نصف. التزاوج بالترتيب '
+        '(العنصر ١ مع ١، ٢ مع ٢) وسيُعرض العمود الثاني مخلوطاً عند الطالب',
       QuestionType.ordering =>
         'الترتيب الافتراضي كما تكتبه (أو حدّد ترتيباً خاصاً)',
+      QuestionType.classification =>
+        'حدّد فئة كل عنصر من القوائم المنسدلة واكتب اسمي الفئتين أعلاه',
       _ => 'اختر الإجابة الصحيحة',
     };
     return _section(
@@ -597,6 +715,34 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_type == QuestionType.classification) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _zoneOneController,
+                    style: const TextStyle(
+                      fontFamily: kAdminFont,
+                      fontSize: 13,
+                    ),
+                    decoration: _inputDecoration('اسم الفئة الأولى'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _zoneTwoController,
+                    style: const TextStyle(
+                      fontFamily: kAdminFont,
+                      fontSize: 13,
+                    ),
+                    decoration: _inputDecoration('اسم الفئة الثانية'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           Text(
             hint,
             style: const TextStyle(
@@ -697,11 +843,38 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
     );
   }
 
+  Widget _trueFalseSection() => _section(
+    'الإجابة الصحيحة',
+    SegmentedButton<int>(
+      segments: const [
+        ButtonSegment(
+          value: 0,
+          label: Text('صواب'),
+          icon: Icon(Icons.check_circle, size: 18),
+        ),
+        ButtonSegment(
+          value: 1,
+          label: Text('خطأ'),
+          icon: Icon(Icons.cancel, size: 18),
+        ),
+      ],
+      selected: {_correctIndex},
+      onSelectionChanged: (selection) =>
+          setState(() => _correctIndex = selection.first),
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        textStyle: WidgetStatePropertyAll(
+          TextStyle(fontFamily: kAdminFont, fontWeight: FontWeight.w700),
+        ),
+      ),
+    ),
+  );
+
   Widget _correctWordsSection() {
+    final isOrdering = _type == QuestionType.ordering;
     final label = switch (_type) {
       QuestionType.fillBlank => 'الإجابات الصحيحة (بدائل مقبولة)',
-      QuestionType.ordering =>
-        'ترتيب الإجابة الصحيح (اختياري — الافتراضي كما تكتبه)',
+      QuestionType.ordering => 'ترتيب الإجابة الصحيح',
       _ => 'الإجابات الرقمية المقبولة',
     };
     return _section(
@@ -709,24 +882,122 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (var i = 0; i < _correctWords.length; i++)
-                Chip(
-                  label: Text(
-                    _correctWords[i],
-                    style: const TextStyle(
-                      fontFamily: kAdminFont,
-                      fontSize: 12,
+          if (isOrdering)
+            Text(
+              'هذا هو الترتيب الذي يُعتبر صحيحاً. اتركه فارغاً ليكون الترتيب '
+              'كما كتبت العناصر في الأعلى.',
+              style: const TextStyle(
+                fontFamily: kAdminFont,
+                fontSize: 11,
+                color: HaffarColors.textSecondary,
+              ),
+            ),
+          if (isOrdering) const SizedBox(height: 6),
+          if (!isOrdering)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var i = 0; i < _correctWords.length; i++)
+                  Chip(
+                    label: Text(
+                      _correctWords[i],
+                      style: const TextStyle(
+                        fontFamily: kAdminFont,
+                        fontSize: 12,
+                      ),
                     ),
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    onDeleted: () => _removeWord(i),
                   ),
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                  onDeleted: () => _removeWord(i),
+              ],
+            )
+          else
+            for (var i = 0; i < _correctWords.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: HaffarColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${i + 1}',
+                        style: const TextStyle(
+                          fontFamily: kAdminFont,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: HaffarColors.outline.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          _correctWords[i],
+                          style: const TextStyle(
+                            fontFamily: kAdminFont,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'أعلى',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: i == 0 ? null : () => _reorderWord(i, -1),
+                      icon: const Icon(Icons.arrow_upward, size: 16),
+                    ),
+                    IconButton(
+                      tooltip: 'أسفل',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: i == _correctWords.length - 1
+                          ? null
+                          : () => _reorderWord(i, 1),
+                      icon: const Icon(Icons.arrow_downward, size: 16),
+                    ),
+                    IconButton(
+                      tooltip: 'حذف',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _removeWord(i),
+                      icon: const Icon(
+                        Icons.close,
+                        size: 16,
+                        color: HaffarColors.grey3,
+                      ),
+                    ),
+                  ],
                 ),
-            ],
-          ),
+              ),
+          if (isOrdering && _correctWords.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 6),
+              child: OutlinedButton.icon(
+                onPressed: _hasAnyOptionText ? _fillOrderFromOptions : null,
+                icon: const Icon(Icons.copy_all, size: 16),
+                label: const Text(
+                  'نسخ العناصر كما هي، ثم أعد ترتيبها',
+                  style: TextStyle(fontFamily: kAdminFont, fontSize: 12),
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -735,7 +1006,9 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
                   controller: _addWordController,
                   style: const TextStyle(fontFamily: kAdminFont, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'اكتب إجابة ثم أضفها...',
+                    hintText: isOrdering
+                        ? 'اكتب عنصر الترتيب (بنفس نص الخيار) ثم أضفه...'
+                        : 'اكتب إجابة ثم أضفها...',
                     hintStyle: const TextStyle(
                       fontFamily: kAdminFont,
                       fontSize: 12,
@@ -763,6 +1036,27 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
         ],
       ),
     );
+  }
+
+  bool get _hasAnyOptionText =>
+      _optionControllers.any((c) => c.text.trim().isNotEmpty);
+
+  void _reorderWord(int index, int delta) {
+    final target = index + delta;
+    if (target < 0 || target >= _correctWords.length) return;
+    setState(() {
+      final word = _correctWords.removeAt(index);
+      _correctWords.insert(target, word);
+    });
+  }
+
+  void _fillOrderFromOptions() {
+    final words = [
+      for (final t in _options)
+        if (t.trim().isNotEmpty) t.trim(),
+    ];
+    if (words.isEmpty) return;
+    setState(() => _correctWords = words);
   }
 
   PreferredSizeWidget _appBar() => AppBar(

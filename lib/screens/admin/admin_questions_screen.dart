@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../design_system/colors.dart';
 import '../../models/admin_stats.dart';
+import '../../providers/content_provider.dart';
 import '../../services/admin_repository.dart';
 import 'admin_widgets.dart';
 
@@ -246,6 +248,16 @@ class _QuestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The editor-defined lesson title when content is loaded; the ordinal is
+    // only a loading/gap fallback.
+    final lesson = context.watch<ContentProvider>().lessonOf(
+      question.subjectId,
+      question.lessonIndex,
+    );
+    final lessonTitle = lesson?.title.trim() ?? '';
+    final lessonLabel = lessonTitle.isNotEmpty
+        ? lessonTitle
+        : 'درس ${question.lessonIndex + 1}';
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -296,7 +308,7 @@ class _QuestionCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${question.subjectName} • درس ${question.lessonIndex + 1} • $_typeLabel',
+                      '${question.subjectName} • $lessonLabel • $_typeLabel',
                       style: const TextStyle(
                         fontFamily: kAdminFont,
                         fontSize: 11,

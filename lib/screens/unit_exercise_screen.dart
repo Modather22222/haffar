@@ -54,12 +54,23 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
     final unitPos = units.indexWhere((u) => u.index == widget.unitIndex);
     final unitNumber = unitPos >= 0 ? unitPos + 1 : widget.unitIndex + 1;
     final unitArabic = Unit.toArabicNumeral(unitNumber);
+    // Admin-defined unit title (units editor) — the ordinal is only a fallback
+    // for units that somehow aren't in the subject payload.
+    final unitTitle =
+        unitPos >= 0 &&
+            unitPos < units.length &&
+            units[unitPos].title.trim().isNotEmpty
+        ? units[unitPos].title.trim()
+        : '';
+    final exerciseTitle = unitTitle.isEmpty
+        ? 'تمرين الوحدة $unitArabic'
+        : 'تمرين الوحدة - $unitTitle';
     final lessonCount = content
         .lessonsOfUnit(widget.subjectId, widget.unitIndex)
         .length;
     return Scaffold(
       backgroundColor: HaffarColors.bgPage,
-      appBar: AppBar(title: Text('تمرين الوحدة $unitArabic')),
+      appBar: AppBar(title: Text(exerciseTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -90,7 +101,7 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'تمرين الوحدة $unitArabic',
+                      exerciseTitle,
                       style: const TextStyle(
                         fontFamily: 'BeVietnamPro',
                         fontSize: 24,
@@ -171,8 +182,7 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
                           ? () => btnCtx.push(
                               '${Routes.practiceQuiz}?'
                               'subject=${Uri.encodeComponent(widget.subjectId)}'
-                              '&title=${Uri.encodeComponent('${widget.subjectName} - تمرين الوحدة '
-                              '$unitArabic')}'
+                              '&title=${Uri.encodeComponent('${widget.subjectName} - $exerciseTitle')}'
                               '&kind=unit&ref=${widget.unitIndex}',
                               extra: questions,
                             )

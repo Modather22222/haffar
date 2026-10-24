@@ -17,6 +17,12 @@ class Lesson {
   final List<String> keyPoints;
   final bool published;
 
+  /// Per-lesson XP economy (admin-editable): [xpBase] is the attempt's base
+  /// XP and [wrongPenalty] is deducted per main-pass mistake. Defaults mirror
+  /// the DB column defaults so seed content keeps the classic economy.
+  final int xpBase;
+  final int wrongPenalty;
+
   const Lesson({
     required this.id,
     required this.subjectId,
@@ -27,6 +33,8 @@ class Lesson {
     this.summary = '',
     this.keyPoints = const [],
     this.published = true,
+    this.xpBase = 100,
+    this.wrongPenalty = 5,
   });
 
   factory Lesson.fromMap(Map<String, dynamic> map) => Lesson(
@@ -39,5 +47,7 @@ class Lesson {
     summary: (map['summary'] as String?) ?? '',
     keyPoints: ((map['key_points'] as List?) ?? const []).cast<String>(),
     published: (map['published'] as bool?) ?? true,
+    xpBase: (map['xp_base'] as int?) ?? 100,
+    wrongPenalty: (map['wrong_penalty'] as int?) ?? 5,
   );
 }

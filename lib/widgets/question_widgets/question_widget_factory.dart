@@ -125,12 +125,17 @@ class QuestionWidgetFactory {
           locked: locked,
         );
       case QuestionType.ordering:
+        final orderWords = question.correctWords;
         return OrderingQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
           imageUrl: question.imageUrl,
           options: question.options,
-          correctOrder: question.correctWords ?? question.options,
+          // Empty/missing sequence falls back to the as-typed order so the
+          // question stays solvable.
+          correctOrder: (orderWords == null || orderWords.isEmpty)
+              ? question.options
+              : orderWords,
           xpReward: question.xpReward,
           onBack: onBack,
           onSkip: onSkip,
@@ -185,12 +190,22 @@ class QuestionWidgetFactory {
           locked: locked,
         );
       case QuestionType.classification:
+        // Category names ride in correctWords when the admin set them
+        // (correctWords is unused for grading in this type).
+        final labels = question.correctWords ?? const <String>[];
+        final hasLabels = labels.length == 2;
         return ClassificationQuestion(
           pathTitle: pathTitle,
           questionText: question.text,
           imageUrl: question.imageUrl,
           items: question.options,
           itemCategories: question.itemCategories ?? [],
+          zoneOneLabel: hasLabels && labels[0].trim().isNotEmpty
+              ? labels[0].trim()
+              : 'الفئة الأولى',
+          zoneTwoLabel: hasLabels && labels[1].trim().isNotEmpty
+              ? labels[1].trim()
+              : 'الفئة الثانية',
           xpReward: question.xpReward,
           onBack: onBack,
           onSkip: onSkip,

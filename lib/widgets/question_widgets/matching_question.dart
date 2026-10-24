@@ -8,6 +8,9 @@ import 'question_base.dart';
 /// green connector line between the pair (Stitch سؤال علوم: المزاوجة).
 /// Re-selecting either endpoint replaces its line. After checking, correct
 /// lines stay green and wrong ones turn red.
+/// The grader pairs left[i] with right[i] (same original index) — the admin
+/// authors pairs by matching order — while the right column is laid out
+/// deterministically shuffled so the answers don't align by row.
 class MatchingQuestion extends StatefulWidget {
   final String pathTitle;
   final String questionText;
@@ -46,7 +49,9 @@ class _MatchingQuestionState extends State<MatchingQuestion> {
   late final List<GlobalKey> _rightKeys;
 
   /// display position of right column -> original (logical) right index,
-  /// deterministically shuffled so answers aren't aligned by row.
+  /// deterministically shuffled. Drives both the displayed order of the right
+  /// column and the grading: left[i] pairs with the right item whose original
+  /// index is i.
   late final List<int> _rightOrder;
 
   int? _selectedLeft;
@@ -258,7 +263,11 @@ class _MatchingQuestionState extends State<MatchingQuestion> {
     return Column(
       children: items.asMap().entries.map((entry) {
         final idx = entry.key;
-        final text = entry.value;
+        // Right column displays in the seeded shuffled order so grading
+        // against the same index pairing isn't visible by row alignment.
+        final text = isLeftColumn
+            ? entry.value
+            : widget.rightItems[_rightOrder[idx]];
         final connectedRight = isLeftColumn ? null : _reverseLookup(idx);
         final isConnected = isLeftColumn
             ? _connections.containsKey(idx)

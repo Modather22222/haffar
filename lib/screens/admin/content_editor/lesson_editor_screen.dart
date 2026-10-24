@@ -38,8 +38,11 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
   late final ContentAdminRepository _admin;
   late final QuillController _summaryController;
   final _titleController = TextEditingController();
+  final _xpBaseController = TextEditingController();
+  final _wrongPenaltyController = TextEditingController();
   final List<TextEditingController> _pointControllers = [];
   Lesson? _lesson;
+  int _questionRewardSum = 0;
   Object? _error;
   bool _loading = true;
   bool _saving = false;
@@ -58,6 +61,8 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
   void dispose() {
     _summaryController.dispose();
     _titleController.dispose();
+    _xpBaseController.dispose();
+    _wrongPenaltyController.dispose();
     for (final c in _pointControllers) {
       c.dispose();
     }
@@ -72,6 +77,8 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
     try {
       final lesson = await _admin.fetchLesson(widget.lessonId);
       _titleController.text = lesson.title;
+      _xpBaseController.text = lesson.xpBase.toString();
+      _wrongPenaltyController.text = lesson.wrongPenalty.toString();
       _summaryController.document = documentFromMarkdown(lesson.summary);
       _summaryController.updateSelection(
         const TextSelection.collapsed(offset: 0),
@@ -83,9 +90,17 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
       if (_pointControllers.isEmpty) {
         _pointControllers.add(TextEditingController());
       }
+      // Σ per-question rewards shown in the XP preview (correct answers
+      // add their reward on top of the base).
+      final questions = await _admin.fetchLessonQuestions(
+        widget.subjectId,
+        lesson.index,
+      );
+      final rewardSum = questions.fold<int>(0, (sum, q) => sum + q.xpReward);
       if (!mounted) return;
       setState(() {
         _lesson = lesson;
+        _questionRewardSum = rewardSum;
         _loading = false;
       });
     } catch (e) {
@@ -427,6 +442,92 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
     }
   }
 
+  /// XP economy card: base reward, wrong-answer deduction, and a live
+  /// preview mixing in the Σ per-question rewards of this lesson's pool.
+  Widget _xpSection(Lesson lesson) {
+    const numberStyle = TextStyle(fontFamily: kAdminFont, fontSize: 13);
+    const labelStyle = TextStyle(fontFamily: kAdminFont, fontSize: 12);
+    final xpBase = int.tryParse(_xpBaseController.text.trim()) ?? lesson.xpBase;
+    final penalty =
+        int.tryParse(_wrongPenaltyController.text.trim()) ?? lesson.wrongPenalty;
+    final perfect = xpBase + _questionRewardSum;
+    return AdminSectionCard(
+      title: 'نقاط تمرين الدرس',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _xpBaseController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                  style: numberStyle,
+                  decoration: InputDecoration(
+                    labelText: 'نقاط الأساس',
+                    labelStyle: labelStyle,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _wrongPenaltyController,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setState(() {}),
+                  style: numberStyle,
+                  decoration: InputDecoration(
+                    labelText: 'خصم الخطأ',
+                    labelStyle: labelStyle,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: HaffarColors.primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              'بلا أخطاء: $perfect نقطة ($xpBase أساس + '
+              '$_questionRewardSum نقاط الأسئلة) • كل خطأ يخصم $penalty نقطة',
+              style: const TextStyle(
+                fontFamily: kAdminFont,
+                fontSize: 12,
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+                color: HaffarColors.primaryDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'نقاط الأسئلة تُضبط من محرر كل سؤال (نقاط الإجابة الصحيحة) '
+            'وتُضاف عند الإجابة الصحيحة في التمريرة الأولى.',
+            style: TextStyle(
+              fontFamily: kAdminFont,
+              fontSize: 11,
+              height: 1.5,
+              color: HaffarColors.grey3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
     final lesson = _lesson;
     if (lesson == null || _saving) return;
@@ -447,6 +548,18 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
       );
       return;
     }
+    // XP economy bounds (validated before any write happens).
+    final xpBase = int.tryParse(_xpBaseController.text.trim());
+    final wrongPenalty = int.tryParse(_wrongPenaltyController.text.trim());
+    if (xpBase == null || wrongPenalty == null) {
+      editorSnack(context, errorMessage: 'اكتب نقاط الدرس كأرقام صحيحة');
+      return;
+    }
+    final xpMessage = validateXpBase(xpBase) ?? validateWrongPenalty(wrongPenalty);
+    if (xpMessage != null) {
+      editorSnack(context, error: ArgumentError(xpMessage));
+      return;
+    }
     setState(() => _saving = true);
     try {
       await _admin.updateLesson(
@@ -457,6 +570,11 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
             .map((c) => c.text.trim())
             .where((t) => t.isNotEmpty)
             .toList(),
+      );
+      await _admin.updateLessonEconomy(
+        lessonId: lesson.id,
+        xpBase: xpBase,
+        wrongPenalty: wrongPenalty,
       );
       await _refreshStudentContent();
       if (!mounted) return;
@@ -646,6 +764,8 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            if (_lesson != null) _xpSection(_lesson!),
             const SizedBox(height: 16),
             SizedBox(
               height: 48,

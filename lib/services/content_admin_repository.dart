@@ -72,6 +72,35 @@ class ContentAdminRepository {
     );
   }
 
+  // ----------------------------------------------------------------- economy
+
+  /// Per-lesson XP economy (admin settings): [xpBase] for a perfect run,
+  /// [wrongPenalty] deducted per main-pass mistake. Per-question rewards
+  /// live on the questions themselves and never change here.
+  Future<void> updateLessonEconomy({
+    required String lessonId,
+    required int xpBase,
+    required int wrongPenalty,
+  }) async {
+    await _client
+        .from('lessons')
+        .update({'xp_base': xpBase, 'wrong_penalty': wrongPenalty})
+        .eq('id', lessonId);
+  }
+
+  /// Per-unit exercise XP economy (admin settings); same semantics as
+  /// [updateLessonEconomy] but applied to the unit exam's base/penalty.
+  Future<void> updateUnitEconomy({
+    required String unitId,
+    required int xpBase,
+    required int wrongPenalty,
+  }) async {
+    await _client
+        .from('units')
+        .update({'xp_base': xpBase, 'wrong_penalty': wrongPenalty})
+        .eq('id', unitId);
+  }
+
   // ----------------------------------------------------------------- lessons
 
   /// Updates the provided fields of a lesson; omitted arguments stay
@@ -89,6 +118,21 @@ class ContentAdminRepository {
     };
     if (patch.isEmpty) return;
     await _client.from('lessons').update(patch).eq('id', lessonId);
+  }
+
+  /// Lesson display title for editor screens (or null): they receive lesson
+  /// indexes, not ids, and need the admin-defined name — including DRAFTS,
+  /// which the student-side ContentProvider never carries (published only).
+  /// Null when there's no such lesson row (or the select fails upstream —
+  /// callers treat it as cosmetic).
+  Future<String?> fetchLessonTitle(String subjectId, int lessonIndex) async {
+    final row = await _client
+        .from('lessons')
+        .select('title')
+        .eq('subject_id', subjectId)
+        .eq('lesson_index', lessonIndex)
+        .maybeSingle();
+    return row?['title'] as String?;
   }
 
   /// Appends a DRAFT lesson shell to an existing unit (admin_create_lesson

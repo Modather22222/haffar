@@ -37,6 +37,7 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
   Object? _error;
   bool _loading = true;
   bool _busy = false;
+  String? _lessonTitle;
 
   @override
   void initState() {
@@ -55,9 +56,19 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
         widget.subjectId,
         widget.lessonIndex,
       );
+      String? lessonTitle;
+      try {
+        lessonTitle = await _admin.fetchLessonTitle(
+          widget.subjectId,
+          widget.lessonIndex,
+        );
+      } catch (_) {
+        // Cosmetic — the question list still loads if the title fails.
+      }
       if (!mounted) return;
       setState(() {
         _questions = questions;
+        _lessonTitle = lessonTitle;
         _loading = false;
       });
     } catch (e) {
@@ -192,7 +203,9 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
 
   PreferredSizeWidget _appBar() => AppBar(
     title: Text(
-      'أسئلة الدرس ${widget.lessonNumber}',
+      _lessonTitle == null
+          ? 'أسئلة الدرس ${widget.lessonNumber}'
+          : 'أسئلة الدرس: $_lessonTitle',
       style: const TextStyle(
         fontFamily: kAdminFont,
         fontSize: 17,

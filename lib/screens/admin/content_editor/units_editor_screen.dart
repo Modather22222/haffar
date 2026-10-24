@@ -9,6 +9,7 @@ import '../../../models/unit.dart';
 import '../../../providers/content_provider.dart';
 import '../../../services/content_admin_repository.dart';
 import '../../../services/content_repository.dart';
+import '../../../utils/content_validators.dart';
 import '../../../utils/routes.dart';
 import '../admin_widgets.dart';
 import 'editor_dialogs.dart';
@@ -136,6 +137,51 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
       await _refreshStudentContent();
       if (!mounted) return;
       editorSnack(context, success: 'تم حفظ العنوان');
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    }
+  }
+
+  /// Edits the unit exercise's XP economy (base reward + wrong deduction)
+  /// through a validated dialog. The preview mixes in the Σ per-question
+  /// rewards of the unit's question pool.
+  Future<void> _editUnitXp(Unit unit) async {
+    if (!mounted) return;
+    final xpBaseController = TextEditingController(
+      text: unit.xpBase.toString(),
+    );
+    final penaltyController = TextEditingController(
+      text: unit.wrongPenalty.toString(),
+    );
+    final lessonIndexes = _lessonsOf(unit).map((l) => l.index).toSet();
+    final rewardSum = context
+        .read<ContentProvider>()
+        .questionsOf(widget.subjectId)
+        .where((q) => lessonIndexes.contains(q.lessonIndex))
+        .fold(0, (sum, q) => sum + q.xpReward);
+    final result = await showDialog<(int, int)>(
+      context: context,
+      builder: (dialogContext) => _UnitXpDialog(
+        unit: unit,
+        rewardSum: rewardSum,
+        xpBaseController: xpBaseController,
+        penaltyController: penaltyController,
+      ),
+    );
+    xpBaseController.dispose();
+    penaltyController.dispose();
+    if (result == null || !mounted) return;
+    try {
+      await _admin.updateUnitEconomy(
+        unitId: unit.id,
+        xpBase: result.$1,
+        wrongPenalty: result.$2,
+      );
+      await _load();
+      await _refreshStudentContent();
+      if (!mounted) return;
+      editorSnack(context, success: 'تم حفظ نقاط الوحدة');
     } catch (e) {
       if (!mounted) return;
       editorSnack(context, error: e);
@@ -334,6 +380,7 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
                 unitNumber: i,
                 lessons: _lessonsOf(unit),
                 onRenameUnit: () => _renameUnit(unit),
+                onEditXp: () => _editUnitXp(unit),
                 onDeleteUnit: () => _deleteUnit(unit),
                 onAddLesson: () => _addLesson(unit),
                 onDeleteLesson: _deleteLesson,
@@ -401,6 +448,7 @@ class _UnitEditorCard extends StatelessWidget {
   final int unitNumber;
   final List<Lesson> lessons;
   final Future<void> Function() onRenameUnit;
+  final Future<void> Function() onEditXp;
   final Future<void> Function() onDeleteUnit;
   final Future<void> Function() onAddLesson;
   final Future<void> Function(Lesson) onDeleteLesson;
@@ -414,6 +462,7 @@ class _UnitEditorCard extends StatelessWidget {
     required this.unitNumber,
     required this.lessons,
     required this.onRenameUnit,
+    required this.onEditXp,
     required this.onDeleteUnit,
     required this.onAddLesson,
     required this.onDeleteLesson,
@@ -432,6 +481,14 @@ class _UnitEditorCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              TextButton.icon(
+                onPressed: onEditXp,
+                icon: const Icon(Icons.stars_outlined, size: 16),
+                label: const Text(
+                  'نقاط الوحدة',
+                  style: TextStyle(fontFamily: kAdminFont, fontSize: 12),
+                ),
+              ),
               TextButton.icon(
                 onPressed: onRenameUnit,
                 icon: const Icon(Icons.edit_outlined, size: 16),
@@ -454,6 +511,20 @@ class _UnitEditorCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 2),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              'نقاط تمرين الوحدة: أساس ${unit.xpBase} • '
+              'خصم الخطأ ${unit.wrongPenalty} نقطة',
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontFamily: kAdminFont,
+                fontSize: 11,
+                color: HaffarColors.grey3,
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           for (var k = 0; k < lessons.length; k++) ...[
@@ -593,6 +664,157 @@ class _UnitEditorCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// XP settings dialog for one unit's exercise: base reward and wrong-answer
+/// deduction with a live preview over the unit's per-question reward sum.
+/// Pops `(xpBase, wrongPenalty)` on save, null on cancel / invalid input.
+class _UnitXpDialog extends StatefulWidget {
+  final Unit unit;
+  final int rewardSum;
+  final TextEditingController xpBaseController;
+  final TextEditingController penaltyController;
+
+  const _UnitXpDialog({
+    required this.unit,
+    required this.rewardSum,
+    required this.xpBaseController,
+    required this.penaltyController,
+  });
+
+  @override
+  State<_UnitXpDialog> createState() => _UnitXpDialogState();
+}
+
+class _UnitXpDialogState extends State<_UnitXpDialog> {
+  String? _error;
+
+  (int, int)? parseValues() {
+    final xpBase = int.tryParse(widget.xpBaseController.text.trim());
+    final penalty = int.tryParse(widget.penaltyController.text.trim());
+    if (xpBase == null || penalty == null) return null;
+    if (validateXpBase(xpBase) != null || validateWrongPenalty(penalty) != null) {
+      return null;
+    }
+    return (xpBase, penalty);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final xpBase =
+        int.tryParse(widget.xpBaseController.text.trim()) ?? widget.unit.xpBase;
+    final penalty =
+        int.tryParse(widget.penaltyController.text.trim()) ??
+        widget.unit.wrongPenalty;
+    const fieldStyle = TextStyle(fontFamily: kAdminFont, fontSize: 13);
+    const labelStyle = TextStyle(fontFamily: kAdminFont, fontSize: 12);
+    InputDecoration fieldDecoration(String label) => InputDecoration(
+      labelText: label,
+      labelStyle: labelStyle,
+      isDense: true,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+    );
+    return AlertDialog(
+      title: const Text(
+        'نقاط تمرين الوحدة',
+        style: TextStyle(
+          fontFamily: kAdminFont,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: widget.xpBaseController,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    onChanged: (_) => setState(() => _error = null),
+                    style: fieldStyle,
+                    decoration: fieldDecoration('نقاط الأساس'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: widget.penaltyController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() => _error = null),
+                    style: fieldStyle,
+                    decoration: fieldDecoration('خصم الخطأ'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: HaffarColors.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'بلا أخطاء: ${xpBase + widget.rewardSum} نقطة '
+                '($xpBase أساس + ${widget.rewardSum} نقاط الأسئلة) '
+                '• كل خطأ يخصم $penalty نقطة',
+                style: const TextStyle(
+                  fontFamily: kAdminFont,
+                  fontSize: 12,
+                  height: 1.5,
+                  fontWeight: FontWeight.w600,
+                  color: HaffarColors.primaryDark,
+                ),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  fontFamily: kAdminFont,
+                  fontSize: 11,
+                  color: HaffarColors.error,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('إلغاء', style: TextStyle(fontFamily: kAdminFont)),
+        ),
+        TextButton(
+          onPressed: () {
+            final values = parseValues();
+            if (values == null) {
+              setState(
+                () => _error =
+                    'اكتب النقاط داخل الحدود (أساس 0..9999، خصم 0..999)',
+              );
+              return;
+            }
+            Navigator.of(context).pop(values);
+          },
+          child: const Text(
+            'حفظ',
+            style: TextStyle(
+              fontFamily: kAdminFont,
+              fontWeight: FontWeight.w700,
+              color: HaffarColors.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
