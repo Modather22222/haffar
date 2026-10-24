@@ -9,7 +9,6 @@ abstract class Routes {
   static const learningGoal = '/learning-goal';
   static const home = '/home';
   static const subjectSelect = '/subject-select';
-  static const lessonPath = '/lesson-path';
   static const question = '/question';
   static const feedback = '/feedback';
   static const leaderboard = '/leaderboard';

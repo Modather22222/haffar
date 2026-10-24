@@ -70,7 +70,8 @@ class SubjectSelectScreen extends StatelessWidget {
                   children: subjects.map((subject) {
                     return InkWell(
                       onTap: () => context.push(
-                        '${Routes.lessonPath}?subject=${subject.id}',
+                        '${Routes.units}?subject=${Uri.encodeComponent(subject.id)}',
+                        extra: subject,
                       ),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(

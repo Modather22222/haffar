@@ -109,10 +109,7 @@ class _QuestionScreenState extends State<QuestionScreen>
         '${Routes.question}?subject=$_subjectId&lesson=$_lessonIndex&q=$_questionIndex',
       );
     } else {
-      context.pushReplacement(
-        Routes.lessonPath,
-        extra: {'subjectId': _subjectId},
-      );
+      context.pushReplacement('${Routes.units}?subject=$_subjectId');
     }
   }
 

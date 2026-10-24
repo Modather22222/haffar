@@ -30,8 +30,4 @@ abstract class AppConstants {
   static const buttonRadius = 16.0;
   static const buttonExtrusion = 4.0;
   static const buttonPressOffset = 2.0;
-
-  // ── Lesson Path ─────────────────────────────────────────────────────────
-  static const nodeSize = 56.0;
-  static const currentNodeRingWidth = 4.0;
 }
