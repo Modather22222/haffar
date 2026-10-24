@@ -1,7 +1,16 @@
 name: Build Release AAB
 
+# Produces a Play-Console-ready signed .aab, attached to a GitHub Release
+# (not a workflow artifact). Versioning is automatic:
+#   versionCode  = GitHub run number (never reused, strictly increasing)
+#   versionName  = greater of pubspec.yaml version and the last v* tag,
+#                  patch +1 — bump pubspec (or push a vMAJOR.MINOR.0 tag) for
+#                  major/minor bumps; otherwise every release bumps the patch.
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,11 +24,13 @@ jobs:
 
     env:
       FLUTTER_VERSION: "3.41.9"
-      VERSION_NAME: "1.0.0"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history + tags — the version step reads the last v* tag.
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -42,6 +53,36 @@ jobs:
           test -n "${{ secrets.KEYSTORE_PASSWORD }}" || { echo "::error::KEYSTORE_PASSWORD secret is empty"; exit 1; }
           test -n "${{ secrets.KEY_ALIAS }}" || { echo "::error::KEY_ALIAS secret is empty"; exit 1; }
           test -n "${{ secrets.KEY_PASSWORD }}" || { echo "::error::KEY_PASSWORD secret is empty"; exit 1; }
+        shell: bash
+
+      - name: Compute Play listing version
+        id: version
+        run: |
+          set -e
+          pub=$(grep -E '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          last_tag="$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || true)"
+          last=""
+          if [ -n "$last_tag" ]; then
+            last="$(echo "${last_tag#v}" | cut -d+ -f1)"
+          fi
+          # Score = major*1e6 + minor*1e3 + patch, pick the greater baseline.
+          # First run ever (no tags): ship pubspec's version unbumped.
+          pick="$(awk -v a="$pub" -v b="$last" '
+            function score(s, arr){ split(s, arr, "."); return arr[1]*1000000 + arr[2]*1000 + arr[3] }
+            BEGIN{ if (b == "" || score(b) <= score(a)) print a; else print b }')"
+          if [ -z "$pick" ]; then
+            echo "::error::Could not determine app version — check pubspec.yaml 'version:'"
+            exit 1
+          fi
+          IFS='.' read -r MA MI PA <<< "$pick"
+          if [ -n "$last" ]; then
+            name="$MA.$MI.$((PA + 1))"
+          else
+            name="$pick"
+          fi
+          echo "version_name=$name" >> "$GITHUB_OUTPUT"
+          echo "version_code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "Release: versionName=$name versionCode=${{ github.run_number }} (baseline=$pick, last_tag=${last_tag:-none})"
         shell: bash
 
       - name: Write env.json
@@ -81,24 +122,42 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          VERSION_CODE: ${{ github.run_number }}
-          VERSION_NAME: ${{ env.VERSION_NAME }}
+          # Read by android/app/build.gradle.kts defaultConfig (versionCode /
+          # versionName) — the same envs the local key.properties flow uses.
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
           flutter build appbundle \
             --release \
             --dart-define-from-file=env.json
 
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: haffar-release-aab
-          path: build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
+      - name: Package AAB and mapping for the release
+        run: |
+          set -e
+          NAME="${{ steps.version.outputs.version_name }}"
+          CODE="${{ steps.version.outputs.version_code }}"
+          AAB_OUT="build/app/outputs/bundle/release/app-release.aab"
+          test -s "$AAB_OUT" || { echo "::error::AAB not found at $AAB_OUT"; exit 1; }
+          cp "$AAB_OUT" "haffar-${NAME}-b${CODE}-release.aab"
+          ( cd build/app/outputs/mapping/release && zip -qr "$GITHUB_WORKSPACE/haffar-${NAME}-b${CODE}-mapping.zip" . ) \
+            || echo "::warning::No release mapping produced — skipping mapping file"
+          ls -l haffar-${NAME}-b${CODE}*
+        shell: bash
 
-      - name: Upload AAB mapping
-        uses: actions/upload-artifact@v4
+      - name: Attach AAB to GitHub Release
+        uses: softprops/action-gh-release@v3
         with:
-          name: haffar-aab-mapping
-          path: build/app/outputs/mapping/release/
-          retention-days: 30
-          if-no-files-found: ignore
+          tag_name: v${{ steps.version.outputs.version_name }}+b${{ steps.version.outputs.version_code }}
+          name: Haffar ${{ steps.version.outputs.version_name }} (code ${{ steps.version.outputs.version_code }})
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          body: |
+            Play-Console-ready signed bundle, built from commit ${{ github.sha }}.
+
+            **versionName:** ${{ steps.version.outputs.version_name }}
+            **versionCode:** ${{ steps.version.outputs.version_code }} — must be strictly greater than the last code uploaded to Play Console.
+
+            Files:
+            - `haffar-...-release.aab` — upload as-is to Play Console (**App bundles**)
+            - `haffar-...-mapping.zip` — attach under **App bundle explorer → deobfuscation files** for this version code
+
