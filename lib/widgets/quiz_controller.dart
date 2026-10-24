@@ -41,17 +41,40 @@ class QuizController extends ChangeNotifier {
     required this.attemptKind,
     required this.attemptRefIndex,
     required this.attemptSaver,
+    this.isPracticeRun = false,
     this.onHeartsDepleted,
     this.onFinished,
-  });
+    this.onReviewDone,
+    int? baseXp,
+    int? wrongPenalty,
+  }) : _baseXpOverride = baseXp,
+       _wrongPenaltyOverride = wrongPenalty;
 
   final List<Question> questions;
   final String subjectId;
   final String attemptKind; // lesson | unit | review
   final int attemptRefIndex;
   final AttemptSaver attemptSaver;
+
+  /// True when this attempt pays only the practice share
+  /// ([GameConstants.practiceXpRatio] of the full amount — currently 0,
+  /// i.e. nothing): a replay of an already-completed lesson/unit exercise,
+  /// or a review attempt.
+  final bool isPracticeRun;
+
+  /// Fired when the review (fix) run completes — after the result screen.
+  /// XP and the attempt were already granted at the main-pass finish, so
+  /// the screen only exits the quiz (or was skipped mid-review).
+  final VoidCallback? onReviewDone;
   final void Function()? onHeartsDepleted;
   final void Function(QuizOutcome outcome)? onFinished;
+
+  /// XP economy injected from the admin settings — lesson quizzes resolve
+  /// `lessons.xp_base`/`wrong_penalty`, unit exams resolve the unit row's.
+  /// Null keeps the GameConstants defaults: review attempts have no
+  /// lesson/unit config and always use the default economy.
+  final int? _baseXpOverride;
+  final int? _wrongPenaltyOverride;
 
   /// Heart gate supplied by the screen (remaining hearts / subscription).
   /// Used only for lesson/review attempts — unit uses [localHearts].
@@ -93,13 +116,17 @@ class QuizController extends ChangeNotifier {
   Duration get elapsed =>
       startTime != null ? DateTime.now().difference(startTime!) : Duration.zero;
 
-  int get baseXp => attemptKind == 'unit'
-      ? GameConstants.unitXpBase
-      : GameConstants.lessonXpBase;
+  int get baseXp =>
+      _baseXpOverride ??
+      (attemptKind == 'unit'
+          ? GameConstants.unitXpBase
+          : GameConstants.lessonXpBase);
 
-  int get penaltyPerWrong => attemptKind == 'unit'
-      ? GameConstants.unitWrongPenalty
-      : GameConstants.lessonWrongPenalty;
+  int get penaltyPerWrong =>
+      _wrongPenaltyOverride ??
+      (attemptKind == 'unit'
+          ? GameConstants.unitWrongPenalty
+          : GameConstants.lessonWrongPenalty);
 
   double get progress {
     if (isFixPhase) {
@@ -156,8 +183,10 @@ class QuizController extends ChangeNotifier {
     return correct;
   }
 
-  /// متابعة / next — may open fix phase, deplete hearts, or finish.
-  /// Returns true if the UI should show the hearts-depleted screen.
+  /// متابعة / next — a skipped (unanswered) question counts as wrong, so
+  /// skipping can't farm the base XP. May open fix phase, deplete hearts,
+  /// or finish. Returns true when the UI should show the hearts-depleted
+  /// screen.
   bool next() {
     if (isUnit) {
       // Unit: private 5-heart pool; subscribers are NOT immune.
@@ -179,6 +208,19 @@ class QuizController extends ChangeNotifier {
       _fixPhaseNext();
       return false;
     }
+    // تخطى pressed without submitting — count it as a wrong answer so
+    // skipping can't farm the base XP: the detail joins [results] (attempt
+    // row + review), the mistake bumps the penalty. Hearts are untouched
+    // (hearts flow through the screen's submit path only).
+    if (!answered) {
+      results.add(
+        AttemptDetail(questionId: currentQuestion.id, isCorrect: false),
+      );
+      initialMistakeCount++;
+      answered = true;
+      isCorrect = false;
+      correctAnswerText = null;
+    }
     if (questionIndex + 1 < questions.length) {
       questionIndex++;
       answered = false;
@@ -186,7 +228,11 @@ class QuizController extends ChangeNotifier {
       correctAnswerText = null;
       currentQuestion = questions[questionIndex];
     } else if (initialMistakeCount > 0) {
+      // Result first: finish fires now (XP/grants come from the main pass
+      // only) while the review intro waits underneath — استمرار on the
+      // result screen reveals [showFixIntro].
       _enterFixPhase();
+      finish();
     } else {
       finish();
     }
@@ -234,7 +280,8 @@ class QuizController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Wrong in fix → repeat the same question. Correct → next mistake or finish.
+  /// Wrong in fix → repeat the same question. Correct → next mistake, or
+  /// end of review (fires [onReviewDone] — the result screen already ran).
   void _fixPhaseNext() {
     if (!isCorrect) {
       // Stay on fixPhaseIndex; remount widget so the user can try again.
@@ -257,16 +304,45 @@ class QuizController extends ChangeNotifier {
       );
       notifyListeners();
     } else {
-      finish();
+      // Review complete — the result screen already granted XP and saved
+      // the attempt at the main-pass end, so finishing again would
+      // duplicate the grant. Hand control back to the screen to exit.
+      onReviewDone?.call();
     }
   }
 
   /// Computes XP, persists the attempt, and emits [onFinished].
-  /// Unit: flat 150 − 18×wrong (no time bonus). Lesson: 100 − 5×wrong.
-  /// Never called on hearts depletion — fail path grants 0 XP.
+  /// XP = base + Σ per-question rewards of correct main-pass answers
+  /// − penalty × wrong, clamped to 0..9999. Practice runs (replays of
+  /// completed content, review attempts) earn
+  /// [GameConstants.practiceXpRatio] of that — currently 0, so only the
+  /// first completion pays out. Fix-phase corrections and failed
+  /// (hearts-depleted) runs earn nothing. Review attempts use the
+  /// default economy since no lesson/unit config applies to them.
   QuizOutcome finish() {
-    var finalXp = baseXp - (initialMistakeCount * penaltyPerWrong);
+    var rewardSum = 0;
+    for (final d in results) {
+      if (!d.isCorrect) continue;
+      for (final q in questions) {
+        if (q.id == d.questionId) {
+          rewardSum += q.xpReward;
+          break;
+        }
+      }
+    }
+    var finalXp = baseXp + rewardSum - (initialMistakeCount * penaltyPerWrong);
     finalXp = finalXp.clamp(0, 9999);
+    // Practice runs (replays of completed content, review attempts) earn
+    // practiceXpRatio × the full amount; with the current policy (0) they
+    // earn nothing — only the first completion pays out.
+    if (isPracticeRun) {
+      final ratio = GameConstants.practiceXpRatio;
+      if (ratio <= 0 || finalXp <= 0) {
+        finalXp = 0;
+      } else {
+        finalXp = ((finalXp * ratio).toInt()).clamp(1, 9999);
+      }
+    }
     _saveAttempt();
     final outcome = QuizOutcome(
       xp: finalXp,

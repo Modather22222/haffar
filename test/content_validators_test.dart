@@ -103,6 +103,26 @@ void main() {
       expect(run(options: ['أ'], correctIndex: 0), isNotNull);
     });
 
+    test('blank option fields are rejected', () {
+      expect(run(options: ['أ', '   '], correctIndex: 0), isNotNull);
+      expect(
+        run(type: 'matching', options: ['أ', '', 'ج', 'د'], correctIndex: 0),
+        isNotNull,
+      );
+    });
+
+    test('calculation keeps blank options legal (free-entry mode)', () {
+      expect(
+        run(
+          type: 'calculation',
+          options: ['', ''],
+          correctWords: ['42'],
+          correctIndex: 0,
+        ),
+        isNull,
+      );
+    });
+
     test('trueFalse only accepts 0/1', () {
       expect(run(type: 'trueFalse', options: [], correctIndex: 0), isNull);
       expect(run(type: 'trueFalse', options: [], correctIndex: 1), isNull);
@@ -135,6 +155,14 @@ void main() {
           type: 'ordering',
           options: ['أ', 'ب', 'ج'],
           correctWords: ['ج', 'أ'],
+        ),
+        isNotNull,
+      );
+      expect(
+        run(
+          type: 'ordering',
+          options: ['أ', 'ب', 'ج'],
+          correctWords: ['ج', 'أ', 'د'],
         ),
         isNotNull,
       );
@@ -316,6 +344,24 @@ void main() {
       expect(validateImageBytes(1024), isNull);
       expect(validateImageBytes(maxUploadBytes), isNull);
       expect(validateImageBytes(maxUploadBytes + 1), isNotNull);
+    });
+  });
+
+  group('xp economy settings', () {
+    test('validateXpBase bounds', () {
+      expect(validateXpBase(0), isNull);
+      expect(validateXpBase(100), isNull);
+      expect(validateXpBase(9999), isNull);
+      expect(validateXpBase(-1), isNotNull);
+      expect(validateXpBase(10000), isNotNull);
+    });
+
+    test('validateWrongPenalty bounds', () {
+      expect(validateWrongPenalty(0), isNull);
+      expect(validateWrongPenalty(5), isNull);
+      expect(validateWrongPenalty(999), isNull);
+      expect(validateWrongPenalty(-3), isNotNull);
+      expect(validateWrongPenalty(1000), isNotNull);
     });
   });
 }

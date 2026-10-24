@@ -82,5 +82,33 @@ void main() {
       expect(built.options.length, 3);
       expect(built.options[built.correctIndex], 'right');
     });
+
+    test('ordering tiles shuffle while the correct sequence survives', () {
+      final original = Question(
+        id: 'ord',
+        subjectId: 'math',
+        lessonIndex: 0,
+        type: QuestionType.ordering,
+        text: 'رتب العناصر',
+        options: const ['1', '2', '3'],
+        correctWords: const ['3', '1', '2'],
+      );
+      var sawShuffle = false;
+      for (var seed = 0; seed < 40; seed++) {
+        final quiz = QuizBuilder.build(
+          'ordering-seed-$seed',
+          [original],
+          count: 1,
+          random: Random(seed),
+        );
+        final built = quiz.first;
+        expect(built.options.toSet(), original.options.toSet());
+        expect(built.correctWords, original.correctWords);
+        if (built.options.join('|') != original.options.join('|')) {
+          sawShuffle = true;
+        }
+      }
+      expect(sawShuffle, isTrue);
+    });
   });
 }

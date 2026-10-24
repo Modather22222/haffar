@@ -34,6 +34,19 @@ String? validateXpReward(int value) {
   return null;
 }
 
+/// Lesson/unit quiz base XP (0..9999) — the completion reward before
+/// per-question bonuses and wrong-answer deductions.
+String? validateXpBase(int value) {
+  if (value < 0 || value > 9999) return 'النقاط الأساسية من 0 إلى 9999';
+  return null;
+}
+
+/// XP deducted per wrong answer in a lesson quiz or unit exercise.
+String? validateWrongPenalty(int value) {
+  if (value < 0 || value > 999) return 'خصم الخطأ من 0 إلى 999';
+  return null;
+}
+
 /// Optional remote image URL (uploaded images are https Supabase URLs).
 String? validateImageUrl(String? value) {
   if (value == null || value.trim().isEmpty) return null;
@@ -57,6 +70,14 @@ String? validateQuestion({
   if (textError != null) return textError;
   final urlError = validateImageUrl(imageUrl);
   if (urlError != null) return urlError;
+
+  // Blank option fields break the student answer cards; calculation may
+  // legitimately keep blank boxes to use free-entry mode instead.
+  if (typeUsesOptions(type) &&
+      type != 'calculation' &&
+      options.any((o) => o.trim().isEmpty)) {
+    return 'لا تترك خياراً فارغاً';
+  }
 
   switch (type) {
     case 'trueFalse':
@@ -93,6 +114,11 @@ String? validateQuestion({
           correctWords.isNotEmpty &&
           correctWords.length != options.length) {
         return 'ترتيب الإجابة يجب أن يطابق عدد العناصر';
+      }
+      if (correctWords != null &&
+          correctWords.isNotEmpty &&
+          !_sameMultiset(correctWords, options)) {
+        return 'ترتيب الإجابة يجب أن يكون العناصر نفسها';
       }
       return null;
     case 'classification':
@@ -188,4 +214,15 @@ String? validateImageBytes(int byteLength) {
   if (byteLength <= 0) return 'تعذّر قراءة الصورة';
   if (byteLength > maxUploadBytes) return 'الصورة أكبر من 5 ميجابايت';
   return null;
+}
+
+/// True when both lists contain exactly the same items ignoring order.
+bool _sameMultiset(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  final left = List.of(a)..sort();
+  final right = List.of(b)..sort();
+  for (var i = 0; i < left.length; i++) {
+    if (left[i] != right[i]) return false;
+  }
+  return true;
 }

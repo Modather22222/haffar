@@ -6,15 +6,18 @@ import '../models/question.dart';
 class QuizBuilder {
   QuizBuilder._();
 
-  /// Option order is only shuffled for types whose options are independent
-  /// choices. matching/classification keep index pairing; ordering uses
-  /// correctWords so its tiles are already order-free.
+  /// Option order is shuffled for types whose options are independent
+  /// choices. matching/classification keep index pairing and are excluded.
+  /// ordering tiles are value-based (graded against correctWords) but are
+  /// still shuffled here: a stored layout identical to the correct order
+  /// would otherwise present the question already solved.
   static const _shufflableTypes = {
     QuestionType.multipleChoice,
     QuestionType.trueFalse,
     QuestionType.definition,
     QuestionType.reading,
     QuestionType.diagram,
+    QuestionType.ordering,
   };
 
   /// Remembers each attempt's question ids so the next attempt on the same

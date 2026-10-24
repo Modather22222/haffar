@@ -17,20 +17,27 @@ abstract class GameConstants {
   static const Duration heartRegenInterval = Duration(minutes: 10);
 
   // ── XP Base Rewards ─────────────────────────────────────────────────────
-  /// Base XP for completing a lesson quiz (no mistakes).
+  /// DEFAULT lesson base XP — mirrors the `lessons.xp_base` column default.
+  /// Actual quiz XP uses the admin-set lesson/unit values when available.
   static const int lessonXpBase = 100;
 
-  /// Base XP for completing a unit exercise (no mistakes).
+  /// DEFAULT unit exercise base XP — mirrors the `units.xp_base` default.
   static const int unitXpBase = 150;
 
-  /// XP awarded for a review attempt (fixed amount).
-  static const int reviewXp = 10;
+  // ── Practice (repeat) runs ──────────────────────────────────────────────
+  /// Fraction of the full attempt XP granted for practice runs: replays of
+  /// an already-completed lesson quiz / unit exam, and review attempts.
+  /// CURRENT POLICY: 0 — replays and reviews earn nothing; only the first
+  /// completion of a lesson/unit pays out. Streaks and attempt history
+  /// still count. Raise this (e.g. 0.3) to re-enable a reduced practice
+  /// share later.
+  static const double practiceXpRatio = 0.0;
 
   // ── Penalties ───────────────────────────────────────────────────────────
-  /// XP deducted per wrong answer in a lesson exam.
+  /// DEFAULT wrong-answer deduction — mirrors `lessons.wrong_penalty` default.
   static const int lessonWrongPenalty = 5;
 
-  /// XP deducted per wrong answer in a unit exam.
+  /// DEFAULT wrong-answer deduction — mirrors `units.wrong_penalty` default.
   static const int unitWrongPenalty = 18;
 
   // ── Bonus ───────────────────────────────────────────────────────────────

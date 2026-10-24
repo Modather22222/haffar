@@ -30,7 +30,7 @@ class _FakeSaver implements AttemptSaver {
   }
 }
 
-Question _q(String id) => Question(
+Question _q(String id, {int xpReward = 5}) => Question(
   id: id,
   subjectId: 'math',
   lessonIndex: 0,
@@ -38,6 +38,7 @@ Question _q(String id) => Question(
   text: 'q $id',
   options: const ['a', 'b'],
   correctIndex: 0,
+  xpReward: xpReward,
 );
 
 Lesson _lesson(String id, int index, int unitIndex) => Lesson(
@@ -123,6 +124,9 @@ void main() {
       _FakeSaver? saver,
       void Function()? onHeartsDepleted,
       void Function(QuizOutcome)? onFinished,
+      void Function()? onReviewDone,
+      int? baseXp,
+      int? wrongPenalty,
     }) {
       final s = saver ?? _FakeSaver();
       final c = QuizController(
@@ -133,6 +137,9 @@ void main() {
         attemptSaver: s,
         onHeartsDepleted: onHeartsDepleted,
         onFinished: onFinished,
+        onReviewDone: onReviewDone,
+        baseXp: baseXp,
+        wrongPenalty: wrongPenalty,
       );
       // Unit ignores global hearts / subscription.
       c.heartsProvider = () => 0;
@@ -203,7 +210,7 @@ void main() {
       expect(out.wrongCount, 1);
     });
 
-    test('all-correct unit finishes with full 150 XP', () {
+    test('all-correct unit finishes with base + question rewards', () {
       QuizOutcome? out;
       final c = makeUnit(
         questions: [_q('a'), _q('b')],
@@ -214,7 +221,8 @@ void main() {
       c.submitAnswer(true, 'a');
       c.next();
       expect(out, isNotNull);
-      expect(out!.xp, GameConstants.unitXpBase);
+      // 150 base + 5 + 5 per-question rewards.
+      expect(out!.xp, GameConstants.unitXpBase + 10);
       expect(c.isFixPhase, isFalse);
     });
 
@@ -306,32 +314,40 @@ void main() {
       expect(c.currentQuestion.id, 'a');
       expect(c.fixRetryCount, 2);
 
-      // Correct → advance (only one mistake → finish).
+      // Correct → review ends (result already fired at the main pass).
       var finished = false;
       QuizOutcome? out;
+      var reviewDone = false;
       final c2 = makeUnit(
         questions: [_q('a'), _q('b')],
         onFinished: (o) {
           finished = true;
           out = o;
         },
+        onReviewDone: () => reviewDone = true,
       );
       c2.submitAnswer(false, 'x');
       c2.next();
       c2.submitAnswer(true, 'a');
       c2.next();
+      // Result comes first: finish fires when the main pass ends.
+      expect(finished, isTrue);
+      expect(out!.wrongCount, 1);
+      // 150 base + one correct (5 reward) − 18 penalty.
+      expect(
+        out!.xp,
+        GameConstants.unitXpBase + 5 - GameConstants.unitWrongPenalty,
+      );
+      expect(reviewDone, isFalse);
+
       c2.beginFixPhaseQuestions();
       c2.submitAnswer(false, 'y');
       c2.next();
-      expect(finished, isFalse);
+      expect(reviewDone, isFalse);
+      // Correcting the last mistake ends the review without re-finishing.
       c2.submitAnswer(true, 'a');
       c2.next();
-      expect(finished, isTrue);
-      expect(out!.wrongCount, 1);
-      expect(
-        out!.xp,
-        GameConstants.unitXpBase - GameConstants.unitWrongPenalty,
-      );
+      expect(reviewDone, isTrue);
     });
   });
 
@@ -342,6 +358,11 @@ void main() {
       bool subscribed = false,
       _FakeSaver? saver,
       void Function()? onHeartsDepleted,
+      void Function(QuizOutcome)? onFinished,
+      void Function()? onReviewDone,
+      int? baseXp,
+      int? wrongPenalty,
+      bool isPracticeRun = false,
     }) {
       final s = saver ?? _FakeSaver();
       final c = QuizController(
@@ -351,6 +372,11 @@ void main() {
         attemptRefIndex: 0,
         attemptSaver: s,
         onHeartsDepleted: onHeartsDepleted,
+        onFinished: onFinished,
+        onReviewDone: onReviewDone,
+        baseXp: baseXp,
+        wrongPenalty: wrongPenalty,
+        isPracticeRun: isPracticeRun,
       );
       c.heartsProvider = () => hearts;
       c.isSubscribedProvider = () => subscribed;
@@ -382,6 +408,81 @@ void main() {
       expect(c.showFixIntro, isTrue);
       expect(c.fixPhaseQuestionIds, ['a']);
       expect(c.initialMistakeCount, 1);
+    });
+
+    test(
+      'skipping without answering counts as wrong and joins the review', () {
+      final c = make(questions: [_q('a'), _q('b')]);
+      c.next(); // skip Q1 (no submit → no heart spend, no sound)
+      expect(c.questionIndex, 1);
+      expect(c.results.length, 1);
+      expect(c.results.single.isCorrect, isFalse);
+      expect(c.initialMistakeCount, 1);
+
+      // Skip the last question as well → review lists both skips, and the
+      // result already fired: base − 2 penalties (no rewards).
+      var xp = -1;
+      final c2 = make(
+        questions: [_q('a'), _q('b')],
+        onFinished: (o) => xp = o.xp,
+      );
+      c2.next();
+      c2.next();
+      expect(c2.isFixPhase, isTrue);
+      expect(c2.fixPhaseQuestionIds, ['a', 'b']);
+      expect(xp, GameConstants.lessonXpBase - 2 * GameConstants.lessonWrongPenalty);
+    });
+
+    test('skipping does not spend unit hearts', () {
+      final c = QuizController(
+        questions: [_q('a'), _q('b')],
+        subjectId: 'math',
+        attemptKind: 'unit',
+        attemptRefIndex: 0,
+        attemptSaver: _FakeSaver(),
+      );
+      c.start();
+      c.next(); // skip-only advance
+      expect(c.localHearts, GameConstants.unitHearts);
+      expect(c.results.single.isCorrect, isFalse);
+    });
+
+    test('result finishes once at the main pass end with review pending', () {
+      var finishCount = 0;
+      QuizOutcome? out;
+      var reviewDone = false;
+      final saver = _FakeSaver();
+      final c = make(
+        questions: [_q('a'), _q('b')],
+        saver: saver,
+        onFinished: (o) {
+          finishCount++;
+          out = o;
+        },
+        onReviewDone: () => reviewDone = true,
+      );
+      c.submitAnswer(false, 'b');
+      c.next(); // → Q2
+      c.submitAnswer(true, 'a');
+      c.next(); // main pass ends → result + review pending underneath
+      expect(c.showFixIntro, isTrue);
+      expect(c.isFixPhase, isTrue);
+      expect(finishCount, 1);
+      // 100 + one correct reward (5) − one wrong (5 penalty).
+      expect(
+        out!.xp,
+        GameConstants.lessonXpBase + 5 - GameConstants.lessonWrongPenalty,
+      );
+      expect(out!.wrongCount, 1);
+      expect(saver.calls, 1);
+
+      // Completing the review must not finish or save the attempt again.
+      c.beginFixPhaseQuestions();
+      c.submitAnswer(true, 'a');
+      c.next();
+      expect(reviewDone, isTrue);
+      expect(finishCount, 1);
+      expect(saver.calls, 1);
     });
 
     test('hearts depletion stops before advancing when not subscribed', () {
@@ -417,8 +518,10 @@ void main() {
       expect(c.fixRetryCount, 1);
       expect(c.currentQuestion.id, 'a');
 
-      // One mistake → correct finishes lesson quiz.
+      // One mistake → result fires at the main pass end; review completes
+      // afterwards without finishing again.
       var xp = -1;
+      var reviewDone = false;
       final c2 = QuizController(
         questions: [_q('a'), _q('b')],
         subjectId: 'math',
@@ -429,6 +532,7 @@ void main() {
           finished = true;
           xp = o.xp;
         },
+        onReviewDone: () => reviewDone = true,
       );
       c2.heartsProvider = () => GameConstants.maxHearts;
       c2.isSubscribedProvider = () => false;
@@ -437,14 +541,19 @@ void main() {
       c2.next();
       c2.submitAnswer(true, 'a');
       c2.next();
+      // Result comes first: the lesson is already finished here.
+      expect(finished, isTrue);
+      expect(xp, GameConstants.lessonXpBase + 5 - GameConstants.lessonWrongPenalty);
+      expect(reviewDone, isFalse);
+
       c2.beginFixPhaseQuestions();
       c2.submitAnswer(false, 'y');
       c2.next();
-      expect(finished, isFalse);
+      expect(reviewDone, isFalse);
+      // Correcting the last mistake ends the review without re-finishing.
       c2.submitAnswer(true, 'a');
       c2.next();
-      expect(finished, isTrue);
-      expect(xp, GameConstants.lessonXpBase - GameConstants.lessonWrongPenalty);
+      expect(reviewDone, isTrue);
     });
 
     test('subscriber ignores lesson heart depletion', () {
@@ -466,6 +575,98 @@ void main() {
           );
       expect(out.xp, expected);
       expect(out.wrongCount, 1);
+    });
+
+    test('per-question rewards add for correct main-pass answers', () {
+      // a correct → +5; b wrong on the main pass (+0 reward, −5 penalty).
+      final c = make(questions: [_q('a'), _q('b', xpReward: 20)]);
+      c.submitAnswer(true, 'a');
+      c.next();
+      c.submitAnswer(false, 'x');
+      final out = c.finish();
+      expect(
+        out.xp,
+        GameConstants.lessonXpBase + 5 - GameConstants.lessonWrongPenalty,
+      );
+      expect(out.wrongCount, 1);
+    });
+
+    test('injected lesson economy drives the formula', () {
+      final c = make(
+        questions: [_q('a', xpReward: 5), _q('b', xpReward: 3)],
+        baseXp: 50,
+        wrongPenalty: 2,
+      );
+      c.submitAnswer(true, 'a'); // +5
+      c.next();
+      c.submitAnswer(true, 'b'); // +3
+      final out = c.finish();
+      expect(out.xp, 50 + 8);
+    });
+
+    test('injected unit economy drives the formula', () {
+      final c = QuizController(
+        questions: [_q('a'), _q('b', xpReward: 9)],
+        subjectId: 'math',
+        attemptKind: 'unit',
+        attemptRefIndex: 0,
+        attemptSaver: _FakeSaver(),
+        baseXp: 80,
+        wrongPenalty: 7,
+      );
+      c.start();
+      c.submitAnswer(true, 'a'); // +5
+      c.next();
+      c.submitAnswer(true, 'b'); // +9
+      final out = c.finish();
+      expect(out.xp, 80 + 14);
+    });
+
+    test('huge totals clamp to 9999 with injected base', () {
+      final c = make(questions: [_q('a', xpReward: 9999)], baseXp: 100);
+      c.submitAnswer(true, 'a');
+      final out = c.finish();
+      expect(out.xp, 9999);
+    });
+
+    test('practice run (replay/review) earns no xp under current policy', () {
+      // full = 100 + 5 + 5 = 110, but the practice share is 0 → nothing.
+      final c = make(questions: [_q('a'), _q('b')], isPracticeRun: true);
+      c.submitAnswer(true, 'a');
+      c.next();
+      c.submitAnswer(true, 'a');
+      final out = c.finish();
+      expect(out.xp, 0);
+      expect(out.wrongCount, 0);
+    });
+
+    test('practice earns nothing even on a tiny full economy', () {
+      // full = 1 → practice share 0 → 0 (no min-1 sliver while ratio is 0).
+      final c = make(
+        questions: [_q('a', xpReward: 1)],
+        baseXp: 0,
+        wrongPenalty: 0,
+        isPracticeRun: true,
+      );
+      c.submitAnswer(true, 'a');
+      expect(c.finish().xp, 0);
+    });
+
+    test('unit practice run earns no xp under current policy', () {
+      // full = 150 + 5 + 5 = 160, practice share 0 → nothing.
+      final c = QuizController(
+        questions: [_q('a'), _q('b')],
+        subjectId: 'math',
+        attemptKind: 'unit',
+        attemptRefIndex: 0,
+        attemptSaver: _FakeSaver(),
+        isPracticeRun: true,
+      );
+      c.start();
+      c.submitAnswer(true, 'a');
+      c.next();
+      c.submitAnswer(true, 'a');
+      expect(c.finish().xp, 0);
     });
 
     test('attempt is saved on finish', () async {
