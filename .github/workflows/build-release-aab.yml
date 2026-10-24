@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-      FLUTTER_VERSION: "3.41.9"
+      FLUTTER_VERSION: "3.47.7"
 
     steps:
       - name: Checkout
