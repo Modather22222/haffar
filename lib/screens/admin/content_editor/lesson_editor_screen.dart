@@ -449,7 +449,8 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
     const labelStyle = TextStyle(fontFamily: kAdminFont, fontSize: 12);
     final xpBase = int.tryParse(_xpBaseController.text.trim()) ?? lesson.xpBase;
     final penalty =
-        int.tryParse(_wrongPenaltyController.text.trim()) ?? lesson.wrongPenalty;
+        int.tryParse(_wrongPenaltyController.text.trim()) ??
+        lesson.wrongPenalty;
     final perfect = xpBase + _questionRewardSum;
     return AdminSectionCard(
       title: 'نقاط تمرين الدرس',
@@ -555,7 +556,8 @@ class _LessonEditorScreenState extends State<LessonEditorScreen> {
       editorSnack(context, errorMessage: 'اكتب نقاط الدرس كأرقام صحيحة');
       return;
     }
-    final xpMessage = validateXpBase(xpBase) ?? validateWrongPenalty(wrongPenalty);
+    final xpMessage =
+        validateXpBase(xpBase) ?? validateWrongPenalty(wrongPenalty);
     if (xpMessage != null) {
       editorSnack(context, error: ArgumentError(xpMessage));
       return;

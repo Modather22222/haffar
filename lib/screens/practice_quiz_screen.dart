@@ -106,13 +106,15 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
       final progress = context.read<ProgressProvider>();
       switch (widget.attemptKind) {
         case 'lesson':
-          isPractice = isPractice ||
+          isPractice =
+              isPractice ||
               progress.isSubjectLessonCompleted(
                 widget.subjectId,
                 widget.attemptRefIndex,
               );
         case 'unit':
-          isPractice = isPractice ||
+          isPractice =
+              isPractice ||
               progress.isUnitExerciseCompleted(
                 widget.subjectId,
                 widget.attemptRefIndex,
@@ -290,7 +292,9 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
         : 'حاول مجدداً';
     final title = switch (widget.attemptKind) {
       'unit' =>
-        _quiz.isPracticeRun ? 'أكملت تمرين الوحدة مرة أخرى!' : 'أكملت تمرين الوحدة!',
+        _quiz.isPracticeRun
+            ? 'أكملت تمرين الوحدة مرة أخرى!'
+            : 'أكملت تمرين الوحدة!',
       'review' => 'راجعت بنجاح!',
       _ => _quiz.isPracticeRun ? 'أكملت الدرس مرة أخرى!' : 'أكملت الدرس!',
     };

@@ -7,7 +7,6 @@ import '../markdown_text.dart';
 /// per-question header with the XP chip was retired from the design —
 /// the quiz screen's own bar owns the top row now.
 
-
 class HintCard extends StatelessWidget {
   final String text;
   final IconData icon;

@@ -53,6 +53,13 @@ class PushService {
       // Foreground messages: system tray only shows them in background —
       // mirror to the local channel while the app is open.
       FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+      // TODO(push-migration): firebase_messaging v17 deprecates the token
+      // APIs, but its replacements are NOT token-equivalent: onRegistered
+      // streams the Firebase Installation ID (FID) — not the FCM token —
+      // and unregister() requires a manifest meta-data flag. The server
+      // sends to FCM tokens stored in push_tokens, so stay on the token
+      // API until a token-equivalent replacement exists.
+      // ignore: deprecated_member_use
       FirebaseMessaging.instance.onTokenRefresh.listen(
         (t) => unawaited(_upsertToken(t)),
       );
@@ -75,6 +82,8 @@ class PushService {
         badge: true,
         sound: true,
       );
+      // v17 deprecates getToken (see push-migration note in init()).
+      // ignore: deprecated_member_use
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
         await _upsertToken(token);
@@ -92,6 +101,8 @@ class PushService {
     if (!_inited) return;
     try {
       final uid = Supabase.instance.client.auth.currentUser?.id;
+      // v17 deprecates getToken (see push-migration note in init()).
+      // ignore: deprecated_member_use
       final token = await FirebaseMessaging.instance.getToken();
       if (uid != null && token != null) {
         await Supabase.instance.client
@@ -100,6 +111,9 @@ class PushService {
             .eq('user_id', uid)
             .eq('token', token);
       }
+      // v17 replaces deleteToken with unregister(), which needs a manifest
+      // meta-data flag — keep token deletion for the push-migration task.
+      // ignore: deprecated_member_use
       await FirebaseMessaging.instance.deleteToken();
     } catch (e, st) {
       AppLog.warn('PushService unregister failed: $e');

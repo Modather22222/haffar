@@ -254,8 +254,9 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
 
   /// Trimmed option texts — preview, storage and helpers all share the same
   /// normalized values so index checks match what is saved.
-  List<String> get _options =>
-      [for (final c in _optionControllers) c.text.trim()];
+  List<String> get _options => [
+    for (final c in _optionControllers) c.text.trim(),
+  ];
 
   /// Words written to `correct_words`: accepted answers for fillBlank, the
   /// correct sequence for ordering, the two category names for
@@ -280,7 +281,10 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
   List<String> _storedOptions() {
     if (!typeUsesOptions(_type.name)) return const <String>[];
     if (_type != QuestionType.calculation) return _options;
-    return [for (final o in _options) if (o.isNotEmpty) o];
+    return [
+      for (final o in _options)
+        if (o.isNotEmpty) o,
+    ];
   }
 
   int _storedCorrectIndex(List<String> storedOptions) {
@@ -703,7 +707,7 @@ class _QuestionEditorScreenState extends State<QuestionEditorScreen> {
     final hint = switch (_type) {
       QuestionType.matching =>
         'العمود الأول: أول نصف — العمود الثاني: ثاني نصف. التزاوج بالترتيب '
-        '(العنصر ١ مع ١، ٢ مع ٢) وسيُعرض العمود الثاني مخلوطاً عند الطالب',
+            '(العنصر ١ مع ١، ٢ مع ٢) وسيُعرض العمود الثاني مخلوطاً عند الطالب',
       QuestionType.ordering =>
         'الترتيب الافتراضي كما تكتبه (أو حدّد ترتيباً خاصاً)',
       QuestionType.classification =>

@@ -12,8 +12,7 @@ import '../utils/local_prefs.dart';
 class SubscriptionCelebration {
   SubscriptionCelebration._();
 
-  static final SubscriptionCelebration instance =
-      SubscriptionCelebration._();
+  static final SubscriptionCelebration instance = SubscriptionCelebration._();
 
   /// Last `subscribed_until` (millis) awaiting display; 0 = nothing pending.
   final ValueNotifier<int> pending = ValueNotifier<int>(0);
@@ -35,7 +34,9 @@ class SubscriptionCelebration {
     }
     if (subscribedUntilMillis <= _celebrated) return; // already celebrated
     if (!_queued.add(subscribedUntilMillis)) return; // already queued
-    if (pending.value > subscribedUntilMillis) return; // stale out-of-order hydrate
+    if (pending.value > subscribedUntilMillis) {
+      return; // stale out-of-order hydrate
+    }
     pending.value = subscribedUntilMillis;
   }
 

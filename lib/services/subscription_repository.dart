@@ -132,9 +132,7 @@ class SubscriptionRepository {
     if (rows.isEmpty) {
       throw StateError('subscription settings missing');
     }
-    return SubscriptionSettings.fromJson(
-      Map<String, dynamic>.from(rows.first),
-    );
+    return SubscriptionSettings.fromJson(Map<String, dynamic>.from(rows.first));
   }
 
   /// Latest own order (pending/approved/rejected), or null when none.

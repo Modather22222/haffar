@@ -158,8 +158,9 @@ class EconomyProvider extends ChangeNotifier {
     // celebrated yet (renewals extend subscribed_until — fresh marker again).
     if (isSubscribed) {
       unawaited(
-        SubscriptionCelebration.instance
-            .consider(subscriptionExpiresAt?.millisecondsSinceEpoch ?? 0),
+        SubscriptionCelebration.instance.consider(
+          subscriptionExpiresAt?.millisecondsSinceEpoch ?? 0,
+        ),
       );
     }
     notifyListeners();

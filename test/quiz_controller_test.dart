@@ -410,8 +410,7 @@ void main() {
       expect(c.initialMistakeCount, 1);
     });
 
-    test(
-      'skipping without answering counts as wrong and joins the review', () {
+    test('skipping without answering counts as wrong and joins the review', () {
       final c = make(questions: [_q('a'), _q('b')]);
       c.next(); // skip Q1 (no submit → no heart spend, no sound)
       expect(c.questionIndex, 1);
@@ -430,7 +429,10 @@ void main() {
       c2.next();
       expect(c2.isFixPhase, isTrue);
       expect(c2.fixPhaseQuestionIds, ['a', 'b']);
-      expect(xp, GameConstants.lessonXpBase - 2 * GameConstants.lessonWrongPenalty);
+      expect(
+        xp,
+        GameConstants.lessonXpBase - 2 * GameConstants.lessonWrongPenalty,
+      );
     });
 
     test('skipping does not spend unit hearts', () {
@@ -543,7 +545,10 @@ void main() {
       c2.next();
       // Result comes first: the lesson is already finished here.
       expect(finished, isTrue);
-      expect(xp, GameConstants.lessonXpBase + 5 - GameConstants.lessonWrongPenalty);
+      expect(
+        xp,
+        GameConstants.lessonXpBase + 5 - GameConstants.lessonWrongPenalty,
+      );
       expect(reviewDone, isFalse);
 
       c2.beginFixPhaseQuestions();

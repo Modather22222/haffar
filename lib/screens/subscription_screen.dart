@@ -570,11 +570,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       title: 'بيانات الحساب البنكي',
       child: Column(
         children: [
-          _bankRow(
-            Icons.account_balance,
-            'البنك',
-            _settings.bankName,
-          ),
+          _bankRow(Icons.account_balance, 'البنك', _settings.bankName),
           const Divider(height: 20),
           Row(
             children: [
@@ -622,11 +618,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ],
           ),
           const Divider(height: 20),
-          _bankRow(
-            Icons.person_outline,
-            'باسم',
-            _settings.accountHolder,
-          ),
+          _bankRow(Icons.person_outline, 'باسم', _settings.accountHolder),
         ],
       ),
     );

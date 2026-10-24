@@ -695,7 +695,8 @@ class _UnitXpDialogState extends State<_UnitXpDialog> {
     final xpBase = int.tryParse(widget.xpBaseController.text.trim());
     final penalty = int.tryParse(widget.penaltyController.text.trim());
     if (xpBase == null || penalty == null) return null;
-    if (validateXpBase(xpBase) != null || validateWrongPenalty(penalty) != null) {
+    if (validateXpBase(xpBase) != null ||
+        validateWrongPenalty(penalty) != null) {
       return null;
     }
     return (xpBase, penalty);

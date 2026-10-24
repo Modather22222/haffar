@@ -49,7 +49,6 @@ class _OrderingQuestionState extends State<OrderingQuestion> {
   void _move(int from, int to) {
     if (widget.locked) return;
     if (from == to) return;
-    if (to > from) to -= 1;
     if (to < 0 || to >= _items.length) return;
     // Stronger tick when the dragged item actually lands in a new slot.
     HapticFeedback.mediumImpact();
@@ -80,7 +79,9 @@ class _OrderingQuestionState extends State<OrderingQuestion> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _items.length,
-            onReorder: (oldIdx, newIdx) => _move(oldIdx, newIdx),
+            // Reports the final index — the framework already adjusts it
+            // for the removed item, so _move needs no manual correction.
+            onReorderItem: _move,
             itemBuilder: (context, idx) {
               return _OrderItem(
                 key: ValueKey(_items[idx]),
