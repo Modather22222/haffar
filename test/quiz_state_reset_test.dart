@@ -134,6 +134,20 @@ void main() {
     expect(find.text('أحسنت! إجابة صحيحة'), findsOneWidget);
   });
 
+  testWidgets('question counter tracks the current question', (tester) async {
+    await _pumpQuiz(tester, const [_mcQ1, _mcQ2]);
+    expect(find.text('السؤال 1 من 2'), findsOneWidget);
+
+    // Answer Q1 and continue.
+    await tester.tap(find.text('2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'تحقق'));
+    await tester.pumpAndSettle();
+    await _continue(tester);
+
+    expect(find.text('السؤال 2 من 2'), findsOneWidget);
+  });
+
   Widget unkeyedHarness(Question q) {
     return MaterialApp(
       home: Scaffold(

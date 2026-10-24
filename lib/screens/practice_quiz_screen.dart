@@ -67,6 +67,62 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
     super.initState();
     _unitIntroVisible = widget.attemptKind == 'unit';
     super.initState();
+    // Resolve the admin-configured XP economy for this attempt (lesson quiz
+    // → lesson row, unit exam → unit row). A missing ContentProvider — the
+    // screen can be pumped standalone (tests) — or a missing row keeps
+    // QuizController's default economy (GameConstants mirrors).
+    int? baseXp;
+    int? wrongPenalty;
+    try {
+      final content = context.read<ContentProvider>();
+      switch (widget.attemptKind) {
+        case 'lesson':
+          final lesson = content.lessonOf(
+            widget.subjectId,
+            widget.attemptRefIndex,
+          );
+          if (lesson != null) {
+            baseXp = lesson.xpBase;
+            wrongPenalty = lesson.wrongPenalty;
+          }
+        case 'unit':
+          for (final unit
+              in content.subjectById(widget.subjectId)?.units ?? const []) {
+            if (unit.index == widget.attemptRefIndex) {
+              baseXp = unit.xpBase;
+              wrongPenalty = unit.wrongPenalty;
+            }
+          }
+        default:
+          break;
+      }
+    } catch (_) {
+      // No provider in scope — defaults keep the attempt playable.
+    }
+    // Practice tier: review attempts always earn the reduced share, and a
+    // lesson/unit exercise replayed after its first completion does too.
+    var isPractice = widget.attemptKind == 'review';
+    try {
+      final progress = context.read<ProgressProvider>();
+      switch (widget.attemptKind) {
+        case 'lesson':
+          isPractice = isPractice ||
+              progress.isSubjectLessonCompleted(
+                widget.subjectId,
+                widget.attemptRefIndex,
+              );
+        case 'unit':
+          isPractice = isPractice ||
+              progress.isUnitExerciseCompleted(
+                widget.subjectId,
+                widget.attemptRefIndex,
+              );
+        default:
+          break;
+      }
+    } catch (_) {
+      // No progress provider in scope — first-run full XP.
+    }
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -77,10 +133,18 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
       attemptKind: widget.attemptKind,
       attemptRefIndex: widget.attemptRefIndex,
       attemptSaver: _RepoAttemptSaver(),
+      isPracticeRun: isPractice,
+      baseXp: baseXp,
+      wrongPenalty: wrongPenalty,
       onHeartsDepleted: () {
         if (mounted) setState(() {});
       },
       onFinished: _onFinished,
+      onReviewDone: () {
+        // Review finished (or skipped) — the result screen already granted
+        // XP and recorded the attempt; return to the lesson/unit path.
+        if (mounted) context.pop();
+      },
     );
     _quiz.heartsProvider = () {
       if (widget.attemptKind == 'unit') return _quiz.localHearts;
@@ -224,11 +288,17 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
         : accuracy >= 50
         ? 'جيد'
         : 'حاول مجدداً';
-    final title = widget.attemptKind == 'unit'
-        ? 'أكملت تمرين الوحدة!'
-        : widget.attemptKind == 'review'
-        ? 'راجعت بنجاح!'
-        : 'أكملت الدرس!';
+    final title = switch (widget.attemptKind) {
+      'unit' =>
+        _quiz.isPracticeRun ? 'أكملت تمرين الوحدة مرة أخرى!' : 'أكملت تمرين الوحدة!',
+      'review' => 'راجعت بنجاح!',
+      _ => _quiz.isPracticeRun ? 'أكملت الدرس مرة أخرى!' : 'أكملت الدرس!',
+    };
+    // Result first, then review: when a review intro is pending beneath
+    // (set before finish fired), استمرار only dismisses this overlay —
+    // the quiz screen stays on the fix intro with حسنا / تخطى. Without a
+    // pending review, continuing closes the quiz route underneath too.
+    final reviewPending = _quiz.showFixIntro;
     LessonCompleteScreen.show(
       context,
       pose: pose,
@@ -237,7 +307,7 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
       accuracyPercent: accuracy,
       accuracyLabel: accuracyLabel,
       duration: outcome.elapsed,
-      popUnderneath: true,
+      popUnderneath: !reviewPending,
     );
   }
 
@@ -331,7 +401,7 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
           TextButton(
             onPressed: () => context.pop(),
             child: const Text(
-              'حق ارجع بعدين',
+              'لاحقا',
               style: TextStyle(
                 fontFamily: 'BeVietnamPro',
                 fontSize: 15,
@@ -374,23 +444,32 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
 
   Widget _fixIntroButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: HaffarPrimaryButton(
-        label: 'حسنا',
-        fullWidth: true,
-        onPressed: () {
-          final pool = context.read<ContentProvider>().questionsOf(
-            widget.subjectId,
-          );
-          final q = _quiz.questionById(
-            _quiz.fixPhaseQuestionIds[_quiz.fixPhaseIndex],
-            pool,
-          );
-          setState(() {
-            _quiz.beginFixPhaseQuestions();
-            _quiz.currentQuestion = q;
-          });
-        },
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          HaffarPrimaryButton(
+            label: 'حسنا',
+            fullWidth: true,
+            // currentQuestion already points at the first review question
+            // (set when the review was entered) — just reveal the questions.
+            onPressed: () {
+              setState(() => _quiz.beginFixPhaseQuestions());
+            },
+          ),
+          TextButton(
+            onPressed: () => context.pop(),
+            child: const Text(
+              'تخطى',
+              style: TextStyle(
+                fontFamily: 'BeVietnamPro',
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: HaffarColors.grey2,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -484,6 +563,7 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
     final heartsToShow = isUnit ? _quiz.localHearts : economy.hearts;
     // Subscribers get unlimited hearts on lessons/review (unit pool is private).
     final showInfinite = economy.isSubscribed && !isUnit;
+    final questionLabel = _questionCountLabel;
     return SafeArea(
       top: true,
       bottom: false,
@@ -497,10 +577,34 @@ class _PracticeQuizScreenState extends State<PracticeQuizScreen>
               showInfinite: showInfinite,
               onClose: () => context.pop(),
             ),
+            if (questionLabel != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                questionLabel,
+                style: const TextStyle(
+                  fontFamily: 'BeVietnamPro',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: HaffarColors.grey2,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  /// "Question 3 of 10" — or its fix-phase equivalent — shown under the
+  /// progress bar so students always know where they are in the quiz.
+  String? get _questionCountLabel {
+    if (_quiz.isFixPhase) {
+      final total = _quiz.fixPhaseQuestionIds.length;
+      if (total == 0) return null;
+      return 'تصحيح الأخطاء ${_quiz.fixPhaseIndex + 1} من $total';
+    }
+    if (_quiz.totalQuestions == 0) return null;
+    return 'السؤال ${_quiz.questionIndex + 1} من ${_quiz.totalQuestions}';
   }
 
   @override
