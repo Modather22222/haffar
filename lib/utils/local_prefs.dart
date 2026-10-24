@@ -22,6 +22,7 @@ class LocalPrefs {
   static const _kPendingUnitKeys = 'pendingUnitKeys';
   static const _kPendingXpEvents = 'pendingXpEvents';
   static const _kPendingStreak = 'pendingStreakBump';
+  static const _kCelebratedSubUntil = 'celebratedSubscribedUntil';
 
   static Future<bool> getBool(String key, {bool fallback = false}) async {
     try {
@@ -84,6 +85,25 @@ class LocalPrefs {
     }
   }
 
+  static Future<int?> getInt(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(key);
+    } catch (e, st) {
+      AppLog.error('LocalPrefs.getInt($key)', e, st);
+      return null;
+    }
+  }
+
+  static Future<void> setInt(String key, int value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(key, value);
+    } catch (e, st) {
+      AppLog.error('LocalPrefs.setInt($key)', e, st);
+    }
+  }
+
   // Named accessors used by ProgressProvider — keep keys in one place.
   static Future<bool> readOnboarded() => getBool(_kOnboarded);
   static Future<void> writeOnboarded(bool v) => setBool(_kOnboarded, v);
@@ -119,6 +139,13 @@ class LocalPrefs {
   static Future<void> writePlanChoice(String? v) => setString(_kPlanChoice, v);
   static Future<bool> readNotifications() => getBool(_kNotifications);
   static Future<void> writeNotifications(bool v) => setBool(_kNotifications, v);
+
+  /// Milliseconds of the subscribed_until the approved-subscription modal
+  /// was already celebrated for (0 = none yet).
+  static Future<int> readCelebratedSubscriptionUntil() async =>
+      (await getInt(_kCelebratedSubUntil)) ?? 0;
+  static Future<void> writeCelebratedSubscriptionUntil(int v) =>
+      setInt(_kCelebratedSubUntil, v);
 
   // Outbox keys — retried on next successful session restore.
   static Future<List<String>> readPendingLessonKeys() =>

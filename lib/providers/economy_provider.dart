@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../services/hearts_repository.dart';
+import '../services/subscription_celebration.dart';
 import '../services/xp_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/app_toast.dart';
@@ -153,6 +154,14 @@ class EconomyProvider extends ChangeNotifier {
     hearts = (profile['hearts'] as int?) ?? hearts;
     final hu = profile['hearts_updated_at'] as String?;
     if (hu != null) heartsUpdatedAt = DateTime.tryParse(hu)?.toUtc();
+    // Queue the approved-subscription celebration if this period was never
+    // celebrated yet (renewals extend subscribed_until — fresh marker again).
+    if (isSubscribed) {
+      unawaited(
+        SubscriptionCelebration.instance
+            .consider(subscriptionExpiresAt?.millisecondsSinceEpoch ?? 0),
+      );
+    }
     notifyListeners();
   }
 

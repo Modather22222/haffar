@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/app_logger.dart';
@@ -58,12 +59,48 @@ class SubscriptionOrder {
   }
 }
 
+/// Subscription display configuration — the flat price and the receiving bank
+/// account. Lives in the DB (`subscription_settings`, singleton row 1) so the
+/// admin can change it without an app release. The app fetches it on screen
+/// open; [SubscriptionRepository.fallbackSettings] is only the offline /
+/// broken-fetch fallback (mirrors the seeded values).
+class SubscriptionSettings {
+  const SubscriptionSettings({
+    required this.priceSdg,
+    required this.bankName,
+    required this.accountHolder,
+    required this.accountNumber,
+  });
+
+  final int priceSdg;
+  final String bankName;
+  final String accountHolder;
+  final String accountNumber;
+
+  /// '8,000 جنيه سوداني' — the heavy price caption on the plan card.
+  String get priceLabel =>
+      '${NumberFormat('#,##0').format(priceSdg)} جنيه سوداني';
+
+  /// '8,000' — used inside Arabic sentences like 'حوّل قيمة الاشتراك (...)'.
+  String get priceGrouped => NumberFormat('#,##0').format(priceSdg);
+
+  factory SubscriptionSettings.fromJson(Map<String, dynamic> json) {
+    return SubscriptionSettings(
+      priceSdg: (json['price_sdg'] as num?)?.toInt() ?? 0,
+      bankName: (json['bank_name'] as String?) ?? '',
+      accountHolder: (json['account_holder'] as String?) ?? '',
+      accountNumber: (json['account_number'] as String?) ?? '',
+    );
+  }
+}
+
 /// Manual bank-transfer subscription flow (no in-app payments):
 /// user uploads رقم العملية + إيصال التحويل → admin approves → 1 month of
 /// unlimited hearts.
 ///
-/// Bank details are placeholders until the real account is provided —
-/// see [bankName] / [accountHolder] / [accountNumber].
+/// Price and bank details come from the live DB (`subscription_settings`) via
+/// [fetchSettings]; the constants below are fallbacks for a broken fetch, not
+/// the source of truth.
 class SubscriptionRepository {
   SubscriptionRepository(this._client);
 
@@ -71,16 +108,34 @@ class SubscriptionRepository {
 
   // ── Plan ──────────────────────────────────────────────────────────────────
   static const String planName = 'حفار برو';
-  static const int planPriceSdg = 49000;
-  static const String planPriceLabel = '49,000 SDG';
 
-  // ── Receiving bank account (shown to the user) ────────────────────────────
-  // TODO: replace these placeholders with the real account before release.
-  static const String bankName = 'اسم البنك — يُضاف لاحقاً';
-  static const String accountHolder = 'اسم صاحب الحساب — يُضاف لاحقاً';
-  static const String accountNumber = '0000 0000 0000';
+  /// Mirrors the seeded values of `subscription_settings` (row id = 1); the
+  /// screen snaps to this when the settings fetch fails so users still see
+  /// the correct configured account and price.
+  static const SubscriptionSettings fallbackSettings = SubscriptionSettings(
+    priceSdg: 8000,
+    bankName: 'بنك الخرطوم - بنكك',
+    accountHolder: 'فتح الرحمن عبد الله محمح',
+    accountNumber: '9874235',
+  );
 
   String? get _uid => _client.auth.currentUser?.id;
+
+  /// The configured price + bank account (singleton row, id = 1). Throws when
+  /// missing/unreachable — callers keep their fallback.
+  Future<SubscriptionSettings> fetchSettings() async {
+    final rows = await _client
+        .from('subscription_settings')
+        .select()
+        .eq('id', 1)
+        .limit(1);
+    if (rows.isEmpty) {
+      throw StateError('subscription settings missing');
+    }
+    return SubscriptionSettings.fromJson(
+      Map<String, dynamic>.from(rows.first),
+    );
+  }
 
   /// Latest own order (pending/approved/rejected), or null when none.
   Future<SubscriptionOrder?> fetchLatestOrder() async {

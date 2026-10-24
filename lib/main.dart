@@ -23,7 +23,6 @@ import 'screens/notification_screen.dart';
 import 'screens/learning_goal_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/subject_select_screen.dart';
-import 'screens/lesson_path_screen.dart';
 import 'screens/lesson_detail_screen.dart';
 import 'screens/unit_exercise_screen.dart';
 import 'screens/practice_quiz_screen.dart';
@@ -39,6 +38,7 @@ import 'screens/subscription_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'services/push_service.dart';
+import 'services/subscription_celebration.dart';
 import 'screens/onboarding_two_screen.dart';
 import 'screens/onboarding_three_screen.dart';
 import 'screens/onboarding_four_screen.dart';
@@ -66,6 +66,11 @@ import 'models/question.dart';
 import 'models/subject.dart';
 import 'utils/routes.dart';
 import 'widgets/mascot.dart';
+import 'widgets/subscription_approved_dialog.dart';
+
+// Root navigator key — allows the celebration gate (mounted above the
+// router) to show its dialog from anywhere in the app.
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 // Provided at build time: CI uses --dart-define; local runs may use
 // --dart-define-from-file=env.json (see env.example.json, gitignored).
@@ -176,8 +181,10 @@ class _HaffarAppState extends State<HaffarApp> {
         title: 'حفار',
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: rootScaffoldMessengerKey,
-        builder: (_, child) =>
-            Directionality(textDirection: TextDirection.rtl, child: child!),
+        builder: (_, child) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: _SubscriptionCelebrationGate(child: child!),
+        ),
         locale: const Locale('ar', 'SA'),
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -279,8 +286,60 @@ class _InitErrorScreen extends StatelessWidget {
   }
 }
 
+/// Mounted above the router in the MaterialApp builder — reacts to the
+/// subscription celebration broker and pops the approved-subscription modal
+/// over whatever screen is live when the approval is detected (app open,
+/// subscription screen refresh…). Shown exactly once per approved period.
+class _SubscriptionCelebrationGate extends StatefulWidget {
+  final Widget child;
+
+  const _SubscriptionCelebrationGate({required this.child});
+
+  @override
+  State<_SubscriptionCelebrationGate> createState() =>
+      _SubscriptionCelebrationGateState();
+}
+
+class _SubscriptionCelebrationGateState
+    extends State<_SubscriptionCelebrationGate> {
+  bool _showing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SubscriptionCelebration.instance.pending.addListener(_showIfPending);
+  }
+
+  @override
+  void dispose() {
+    SubscriptionCelebration.instance.pending.removeListener(_showIfPending);
+    super.dispose();
+  }
+
+  Future<void> _showIfPending() async {
+    if (_showing) return;
+    if (SubscriptionCelebration.instance.pending.value <= 0) return;
+    // The gate sits above the root navigator, so its own context has no
+    // Navigator — the dialog must be pushed via the navigator key context.
+    final navigatorContext = _rootNavigatorKey.currentContext;
+    if (navigatorContext == null) return;
+    _showing = true;
+    try {
+      await showSubscriptionApprovedDialog(navigatorContext);
+    } finally {
+      _showing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 final GoRouter router = GoRouter(
   initialLocation: Routes.splash,
+  // Used by the subscription celebration gate to surface its modal on the
+  // root navigator, above whatever route is active.
+  navigatorKey: _rootNavigatorKey,
   routes: [
     GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
     GoRoute(
@@ -368,10 +427,6 @@ final GoRouter router = GoRouter(
         }
         return UnitsScreen(subjectId: subjectId, subject: subject);
       },
-    ),
-    GoRoute(
-      path: Routes.lessonPath,
-      builder: (_, _) => const LessonPathScreen(),
     ),
     GoRoute(
       path: Routes.lessonDetail,

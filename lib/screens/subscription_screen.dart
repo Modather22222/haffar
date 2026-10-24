@@ -14,9 +14,11 @@ import '../utils/app_toast.dart';
 
 /// حفار برو — manual bank-transfer subscription.
 ///
-/// The user transfers 49,000 SDG to our account, uploads the receipt
-/// (ايصال التحويل) and enters the transaction number (رقم العملية); the admin
-/// then reviews and approves it from the الاشتراك screen.
+/// The flat price and the bank account are fetched from the DB
+/// (`subscription_settings`) so the admin can change them without a release.
+/// The user transfers, uploads the receipt (ايصال التحويل) and enters the
+/// transaction number (رقم العملية); the admin reviews and approves from the
+/// الاشتراك screen.
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
 
@@ -32,6 +34,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _loading = true;
   bool _submitting = false;
   SubscriptionOrder? _order;
+  SubscriptionSettings _settings = SubscriptionRepository.fallbackSettings;
   Uint8List? _receiptBytes;
   String? _receiptMime;
 
@@ -76,6 +79,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     } catch (e, st) {
       AppLog.warn('fetchLatestOrder failed: $e');
       AppLog.error('fetchLatestOrder', e, st);
+    }
+    // Price + bank details — cosmetic, the fallback constants cover a failure.
+    try {
+      final settings = await _repo.fetchSettings();
+      if (mounted) setState(() => _settings = settings);
+    } catch (e, st) {
+      AppLog.warn('subscription settings fetch failed: $e');
+      AppLog.error('subscription settings fetch', e, st);
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -194,15 +205,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     _formCard(),
                   ],
                   const SizedBox(height: 16),
-                  Text(
-                    'الاشتراك بيتفعّل يدوياً بعد مراجعة التحويل — خلال ٢٤ ساعة.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'PlusJakartaSans',
-                      fontSize: 12,
-                      color: HaffarColors.grey2,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -455,9 +457,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text(
-                    SubscriptionRepository.planPriceLabel,
-                    style: TextStyle(
+                  Text(
+                    _settings.priceLabel,
+                    style: const TextStyle(
                       fontFamily: 'BeVietnamPro',
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -510,10 +512,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Widget _stepsCard() {
-    const steps = [
-      'حوّل قيمة الاشتراك (49,000 جنيه) إلى الحساب البنكي أدناه',
+    final steps = [
+      'حوّل قيمة الاشتراك (${_settings.priceGrouped} جنيه سوداني) إلى الحساب البنكي أدناه',
       'صوّر إيصال التحويل وسجّل رقم العملية',
-      'أرسل الطلب — نراجعه ونفعّل اشتراكك خلال ٢٤ ساعة',
+      'ارسل طلب الاشتراك',
+      'سيتم مراجعة الطلب وتفعيل الاشتراك خلال فترة وجيزة',
     ];
     return _whiteCard(
       title: 'كيف تشترك؟',
@@ -570,13 +573,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           _bankRow(
             Icons.account_balance,
             'البنك',
-            SubscriptionRepository.bankName,
-          ),
-          const Divider(height: 20),
-          _bankRow(
-            Icons.person_outline,
-            'صاحب الحساب',
-            SubscriptionRepository.accountHolder,
+            _settings.bankName,
           ),
           const Divider(height: 20),
           Row(
@@ -597,7 +594,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      SubscriptionRepository.accountNumber,
+                      _settings.accountNumber,
                       style: const TextStyle(
                         fontFamily: 'BeVietnamPro',
                         fontSize: 15,
@@ -617,14 +614,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 ),
                 onPressed: () async {
                   await Clipboard.setData(
-                    const ClipboardData(
-                      text: SubscriptionRepository.accountNumber,
-                    ),
+                    ClipboardData(text: _settings.accountNumber),
                   );
                   if (mounted) AppToast.show('تم نسخ رقم الحساب');
                 },
               ),
             ],
+          ),
+          const Divider(height: 20),
+          _bankRow(
+            Icons.person_outline,
+            'باسم',
+            _settings.accountHolder,
           ),
         ],
       ),
@@ -693,7 +694,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ),
             decoration: const InputDecoration(
               counterText: '',
-              hintText: 'مثال: TRX-000123',
+              hintText: '0000',
               filled: true,
               fillColor: HaffarColors.background,
               border: OutlineInputBorder(
@@ -740,15 +741,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: HaffarColors.textSecondary,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'تُرفع الصورة عند إرسال الطلب فقط',
-                      style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
-                        fontSize: 11,
-                        color: HaffarColors.grey2,
                       ),
                     ),
                   ],
