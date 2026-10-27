@@ -151,6 +151,9 @@ jobs:
           name: Haffar ${{ steps.version.outputs.version_name }} (code ${{ steps.version.outputs.version_code }})
           fail_on_unmatched_files: true
           overwrite_files: true
+          files: |
+            haffar-${{ steps.version.outputs.version_name }}-b${{ steps.version.outputs.version_code }}-release.aab
+            haffar-${{ steps.version.outputs.version_name }}-b${{ steps.version.outputs.version_code }}-mapping.zip
           body: |
             Play-Console-ready signed bundle, built from commit ${{ github.sha }}.
 
