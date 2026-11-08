@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -44,6 +44,19 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
           cache-key: flutter-:pub-get-:-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: Restore pub & Gradle caches
+        # Pub packages + Gradle wrapper/AGP/Kotlin artifacts — a cold restore
+        # of these costs several minutes on every runner.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: deps-${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle.properties', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
 
       - name: Validate secrets
         run: |
