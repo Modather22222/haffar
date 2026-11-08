@@ -527,8 +527,8 @@ class _UnitEditorCard extends StatelessWidget {
       title: 'الوحدة $unitNumber — ${unit.title}',
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          Wrap(
+            alignment: WrapAlignment.end,
             children: [
               TextButton.icon(
                 onPressed: onEditQuiz,
@@ -554,7 +554,6 @@ class _UnitEditorCard extends StatelessWidget {
                   style: TextStyle(fontFamily: kAdminFont, fontSize: 12),
                 ),
               ),
-              const SizedBox(width: 4),
               TextButton.icon(
                 onPressed: onDeleteUnit,
                 icon: const Icon(Icons.delete_outline, size: 16),
