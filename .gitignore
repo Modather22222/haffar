@@ -50,8 +50,13 @@ android/key/
 *.jks
 *.keystore
 
+# Node (image tools etc. — never commit)
+node_modules/
+package-lock.json
+
 # Local tool configs containing API keys — never commit
 opencode.json
+/SUPABASE-MCP.md
 .vscode/mcp.json
 android/build/
 android/.kotlin/
