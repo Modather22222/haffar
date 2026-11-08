@@ -8,6 +8,10 @@ name: Build Release AAB
 #                  major/minor bumps; otherwise every release bumps the patch.
 on:
   workflow_dispatch:
+  # TEMP (verification of the quiz-delivery feature): fires the release build
+  # on this push; reverted in the next commit. Manual-only design preserved.
+  push:
+    branches: [main]
 
 permissions:
   contents: write
