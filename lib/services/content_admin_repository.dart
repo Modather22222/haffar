@@ -7,6 +7,30 @@ import '../models/lesson.dart';
 import '../models/question.dart';
 import '../utils/content_validators.dart';
 
+/// Editable lesson quiz delivery settings, loaded by
+/// [ContentAdminRepository.fetchLessonQuizSettings].
+///
+/// [id] is the `lessons.id` row key used for updates; [title] feeds the
+/// editor header (drafts included). [quizSize] null + empty [quizIds] keep
+/// the built-in defaults (3 — or 10 for english).
+class LessonQuizSettings {
+  final String id;
+  final String title;
+  final int? quizSize;
+  final List<String> quizIds;
+
+  const LessonQuizSettings({
+    required this.id,
+    required this.title,
+    required this.quizSize,
+    required this.quizIds,
+  });
+
+  /// True when [pinned mode] is active — the explicit question list wins
+  /// over any numeric size.
+  bool get usesPinnedQuestions => quizIds.isNotEmpty;
+}
+
 /// Admin-side CRUD for curriculum content.
 ///
 /// Simple row edits go through PostgREST under the `fn_is_admin()` RLS
@@ -99,6 +123,61 @@ class ContentAdminRepository {
         .from('units')
         .update({'xp_base': xpBase, 'wrong_penalty': wrongPenalty})
         .eq('id', unitId);
+  }
+
+  /// Saves the unit exercise (تمرين الوحدة) delivery settings: [quizSize]
+  /// `null` (and an empty [quizIds]) restores the DB default (10); a
+  /// non-empty [quizIds] pins exact questions in display order and
+  /// overrides the size. Mirrors [updateLessonQuiz].
+  Future<void> updateUnitQuiz({
+    required String unitId,
+    required int? quizSize,
+    required List<String> quizIds,
+  }) async {
+    await _client
+        .from('units')
+        .update({'quiz_size': quizSize, 'quiz_ids': quizIds})
+        .eq('id', unitId);
+  }
+
+  // ------------------------------------------------------- quiz delivery
+
+  /// Lesson quiz (تمرين الدرس) identity + delivery settings for the admin
+  /// editor: the row's [LessonQuizSettings.id] (updates key on it, not the
+  /// pair subject+index), title, pinned size (null = built-in default) and
+  /// pinned question ids.
+  Future<LessonQuizSettings?> fetchLessonQuizSettings(
+    String subjectId,
+    int lessonIndex,
+  ) async {
+    final row = await _client
+        .from('lessons')
+        .select('id,title,quiz_size,quiz_ids')
+        .eq('subject_id', subjectId)
+        .eq('lesson_index', lessonIndex)
+        .maybeSingle();
+    if (row == null) return null;
+    return LessonQuizSettings(
+      id: row['id'] as String,
+      title: (row['title'] as String?) ?? '',
+      quizSize: row['quiz_size'] as int?,
+      quizIds: ((row['quiz_ids'] as List?) ?? const []).cast<String>(),
+    );
+  }
+
+  /// Saves the lesson quiz delivery settings. [quizSize] `null` (and an
+  /// empty [quizIds]) restores the built-in default (3, or 10 for english);
+  /// a non-empty [quizIds] overrides the size and shows exactly the pinned
+  /// questions in display order.
+  Future<void> updateLessonQuiz({
+    required String lessonId,
+    required int? quizSize,
+    required List<String> quizIds,
+  }) async {
+    await _client
+        .from('lessons')
+        .update({'quiz_size': quizSize, 'quiz_ids': quizIds})
+        .eq('id', lessonId);
   }
 
   // ----------------------------------------------------------------- lessons

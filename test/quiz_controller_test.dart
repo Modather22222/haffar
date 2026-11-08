@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:haffar/models/lesson.dart';
 import 'package:haffar/models/question.dart';
 import 'package:haffar/models/quiz_attempt.dart';
+import 'package:haffar/models/unit.dart';
 import 'package:haffar/services/lesson_unlocks.dart';
 import 'package:haffar/utils/game_constants.dart';
 import 'package:haffar/widgets/quiz_controller.dart';
@@ -96,23 +97,37 @@ void main() {
   });
 
   group('QuizBuilder helpers in lesson_unlocks', () {
-    test('buildLessonQuiz respects english count override', () {
+    test('buildLessonQuiz follows the lesson config (english included)', () {
       final pool = List.generate(12, (i) => _q('e$i'));
       final quiz = buildLessonQuiz(
         subjectId: 'english',
         lessonIndex: 0,
+        lesson: const Lesson(
+          id: 'lesson-1',
+          subjectId: 'english',
+          unitIndex: 0,
+          index: 0,
+          title: 'درس',
+          quizSize: 10,
+        ),
         pool: pool,
       );
       expect(quiz.length, 10);
     });
 
-    test('buildUnitQuiz builds requested count', () {
+    test('buildUnitQuiz builds the count from the unit config', () {
       final pool = List.generate(20, (i) => _q('u$i'));
       final quiz = buildUnitQuiz(
         subjectId: 'math',
         unitIndex: 0,
+        unit: const Unit(
+          id: 'unit-1',
+          subjectId: 'math',
+          index: 0,
+          title: 'وحدة',
+          quizSize: 9,
+        ),
         pool: pool,
-        count: 9,
       );
       expect(quiz.length, 9);
     });

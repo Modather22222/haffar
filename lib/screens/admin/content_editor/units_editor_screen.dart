@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../design_system/colors.dart';
 import '../../../models/lesson.dart';
+import '../../../models/question.dart';
 import '../../../models/unit.dart';
 import '../../../providers/content_provider.dart';
 import '../../../services/content_admin_repository.dart';
@@ -14,6 +15,7 @@ import '../../../utils/routes.dart';
 import '../admin_widgets.dart';
 import 'editor_dialogs.dart';
 import 'lesson_template_sheet.dart';
+import 'quiz_delivery_card.dart';
 
 /// Units + lessons management for one subject: create/delete units, add,
 /// remove, and reorder lessons inside a unit, and edit lesson titles.
@@ -182,6 +184,50 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
       await _refreshStudentContent();
       if (!mounted) return;
       editorSnack(context, success: 'تم حفظ نقاط الوحدة');
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    }
+  }
+
+  /// Edits the unit exercise delivery (عدد الأسئلة / الأسئلة المحددة) via
+  /// the shared two-mode dialog, then saves through [updateUnitQuiz].
+  /// Pinned-mode pool = the questions of the unit's lessons.
+  Future<void> _editUnitQuiz(Unit unit) async {
+    if (!mounted) return;
+    final sizeController = TextEditingController(
+      text: unit.quizSize?.toString() ?? '',
+    );
+    final lessonIndexes = _lessonsOf(unit).map((l) => l.index).toSet();
+    final unitQuestions = context
+        .read<ContentProvider>()
+        .questionsOf(widget.subjectId)
+        .where((q) => lessonIndexes.contains(q.lessonIndex))
+        .toList();
+    final result = await showDialog<(int?, List<String>)>(
+      context: context,
+      builder: (dialogContext) => _UnitQuizDialog(
+        unit: unit,
+        questions: unitQuestions,
+        initialMode: unit.quizIds.isNotEmpty
+            ? QuizDeliveryMode.pinned
+            : QuizDeliveryMode.fixedCount,
+        sizeController: sizeController,
+        initialSelected: List.of(unit.quizIds),
+      ),
+    );
+    sizeController.dispose();
+    if (result == null || !mounted) return;
+    try {
+      await _admin.updateUnitQuiz(
+        unitId: unit.id,
+        quizSize: result.$1,
+        quizIds: result.$2,
+      );
+      await _load();
+      await _refreshStudentContent();
+      if (!mounted) return;
+      editorSnack(context, success: 'تم حفظ إعدادات التمرين');
     } catch (e) {
       if (!mounted) return;
       editorSnack(context, error: e);
@@ -381,6 +427,7 @@ class _ContentUnitsScreenState extends State<ContentUnitsScreen> {
                 lessons: _lessonsOf(unit),
                 onRenameUnit: () => _renameUnit(unit),
                 onEditXp: () => _editUnitXp(unit),
+                onEditQuiz: () => _editUnitQuiz(unit),
                 onDeleteUnit: () => _deleteUnit(unit),
                 onAddLesson: () => _addLesson(unit),
                 onDeleteLesson: _deleteLesson,
@@ -449,6 +496,7 @@ class _UnitEditorCard extends StatelessWidget {
   final List<Lesson> lessons;
   final Future<void> Function() onRenameUnit;
   final Future<void> Function() onEditXp;
+  final Future<void> Function() onEditQuiz;
   final Future<void> Function() onDeleteUnit;
   final Future<void> Function() onAddLesson;
   final Future<void> Function(Lesson) onDeleteLesson;
@@ -463,6 +511,7 @@ class _UnitEditorCard extends StatelessWidget {
     required this.lessons,
     required this.onRenameUnit,
     required this.onEditXp,
+    required this.onEditQuiz,
     required this.onDeleteUnit,
     required this.onAddLesson,
     required this.onDeleteLesson,
@@ -481,6 +530,14 @@ class _UnitEditorCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              TextButton.icon(
+                onPressed: onEditQuiz,
+                icon: const Icon(Icons.tune, size: 16),
+                label: const Text(
+                  'أسئلة التمرين',
+                  style: TextStyle(fontFamily: kAdminFont, fontSize: 12),
+                ),
+              ),
               TextButton.icon(
                 onPressed: onEditXp,
                 icon: const Icon(Icons.stars_outlined, size: 16),
@@ -805,6 +862,127 @@ class _UnitXpDialogState extends State<_UnitXpDialog> {
               return;
             }
             Navigator.of(context).pop(values);
+          },
+          child: const Text(
+            'حفظ',
+            style: TextStyle(
+              fontFamily: kAdminFont,
+              fontWeight: FontWeight.w700,
+              color: HaffarColors.primary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Two-mode editor for the unit exercise (تمرين الوحدة): fixed random
+/// count or pinned questions. Embeds the shared [QuizDeliveryCard] and
+/// pops `(quizSize, quizIds)` — the caller persists via
+/// [ContentAdminRepository.updateUnitQuiz].
+class _UnitQuizDialog extends StatefulWidget {
+  final Unit unit;
+  final List<Question> questions;
+  final QuizDeliveryMode initialMode;
+  final TextEditingController sizeController;
+  final List<String> initialSelected;
+
+  const _UnitQuizDialog({
+    required this.unit,
+    required this.questions,
+    required this.initialMode,
+    required this.sizeController,
+    required this.initialSelected,
+  });
+
+  @override
+  State<_UnitQuizDialog> createState() => _UnitQuizDialogState();
+}
+
+class _UnitQuizDialogState extends State<_UnitQuizDialog> {
+  late QuizDeliveryMode _mode = widget.initialMode;
+  late List<String> _selected = widget.initialSelected;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'أسئلة تمرين الوحدة',
+        style: TextStyle(
+          fontFamily: kAdminFont,
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            QuizDeliveryCard(
+              questions: widget.questions,
+              mode: _mode,
+              sizeController: widget.sizeController,
+              selectedIds: _selected,
+              busy: false,
+              showSave: false,
+              title: null,
+              onModeChanged: (mode) => setState(() {
+                _error = null;
+                _mode = mode;
+              }),
+              onTogglePinned: (id) => setState(() {
+                _error = null;
+                if (_selected.contains(id)) {
+                  _selected = List.of(_selected)..remove(id);
+                } else {
+                  _selected = List.of(_selected)..add(id);
+                }
+              }),
+              onSizeDelta: (delta) => setState(() {
+                final current =
+                    int.tryParse(widget.sizeController.text.trim()) ?? 0;
+                widget.sizeController.text = ((current + delta).clamp(
+                  1,
+                  200,
+                )).toString();
+              }),
+              onSave: () {},
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: kAdminFont,
+                  fontSize: 11,
+                  color: HaffarColors.error,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('إلغاء', style: TextStyle(fontFamily: kAdminFont)),
+        ),
+        TextButton(
+          onPressed: () {
+            final (:error, quizSize: size, quizIds: ids) = resolveQuizDelivery(
+              mode: _mode,
+              sizeController: widget.sizeController,
+              selectedIds: _selected,
+            );
+            if (error != null) {
+              setState(() => _error = error);
+              return;
+            }
+            Navigator.of(context).pop((size, ids));
           },
           child: const Text(
             'حفظ',

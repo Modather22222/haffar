@@ -23,6 +23,15 @@ class Lesson {
   final int xpBase;
   final int wrongPenalty;
 
+  /// Per-lesson exercise delivery (admin-editable), see
+  /// `lessons.quiz_size` / `lessons.quiz_ids`:
+  /// [quizSize] limits how many questions تمرين الدرس shows (`null` =
+  /// built-in default: 3, or 10 for english). [quizIds] pins an explicit
+  /// question set in display order and, when non-empty, overrides
+  /// [quizSize].
+  final int? quizSize;
+  final List<String> quizIds;
+
   const Lesson({
     required this.id,
     required this.subjectId,
@@ -35,6 +44,8 @@ class Lesson {
     this.published = true,
     this.xpBase = 100,
     this.wrongPenalty = 5,
+    this.quizSize,
+    this.quizIds = const [],
   });
 
   factory Lesson.fromMap(Map<String, dynamic> map) => Lesson(
@@ -49,5 +60,7 @@ class Lesson {
     published: (map['published'] as bool?) ?? true,
     xpBase: (map['xp_base'] as int?) ?? 100,
     wrongPenalty: (map['wrong_penalty'] as int?) ?? 5,
+    quizSize: map['quiz_size'] as int?,
+    quizIds: ((map['quiz_ids'] as List?) ?? const []).cast<String>(),
   );
 }

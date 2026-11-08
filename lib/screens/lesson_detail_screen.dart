@@ -50,11 +50,18 @@ class _LessonDetailScreenState extends State<LessonDetailScreen>
     final lessons = content.lessonsOf(widget.subjectId);
     final pos = lessons.indexWhere((l) => l.index == widget.lessonIndex);
     _lessonOrdinal = pos >= 0 ? pos + 1 : widget.lessonIndex + 1;
-    _quizQuestions = buildLessonQuiz(
-      subjectId: widget.subjectId,
-      lessonIndex: widget.lessonIndex,
-      pool: content.getQuestions(widget.subjectId, widget.lessonIndex),
-    );
+    // A missing lesson row (hidden draft/removed) has no delivery config —
+    // an empty exercise list is the safe outcome; the body handles the
+    // placeholder copy.
+    final lesson = _lesson;
+    _quizQuestions = lesson == null
+        ? const <Question>[]
+        : buildLessonQuiz(
+            subjectId: widget.subjectId,
+            lessonIndex: widget.lessonIndex,
+            lesson: lesson,
+            pool: content.getQuestions(widget.subjectId, widget.lessonIndex),
+          );
   }
 
   void _back() {

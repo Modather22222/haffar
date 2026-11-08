@@ -37,12 +37,21 @@ class _UnitExerciseScreenState extends State<UnitExerciseScreen> {
     final content = context.read<ContentProvider>();
     // Unit uses a private 5-heart pool per attempt — never global hearts.
     final pool = content.getUnitQuestions(widget.subjectId, widget.unitIndex);
-    _questions = buildUnitQuiz(
-      subjectId: widget.subjectId,
-      unitIndex: widget.unitIndex,
-      pool: pool,
-      count: 10,
+    final subject = content.subjectById(widget.subjectId);
+    final unit = subject?.units.cast<Unit?>().firstWhere(
+      (u) => u != null && u.index == widget.unitIndex,
+      orElse: () => null,
     );
+    // A missing unit row (removed) has no delivery config — an empty
+    // exercise disables the Start button safely.
+    _questions = unit == null
+        ? const <Question>[]
+        : buildUnitQuiz(
+            subjectId: widget.subjectId,
+            unitIndex: widget.unitIndex,
+            unit: unit,
+            pool: pool,
+          );
   }
 
   @override

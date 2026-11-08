@@ -11,6 +11,13 @@ class Unit {
   final int xpBase;
   final int wrongPenalty;
 
+  /// Per-unit exercise delivery (admin-editable), see `units.quiz_size` /
+  /// `units.quiz_ids`: [quizSize] caps questions per attempt (`null` =
+  /// DB default 10); [quizIds] pins an explicit set in display order and,
+  /// when non-empty, overrides [quizSize].
+  final int? quizSize;
+  final List<String> quizIds;
+
   const Unit({
     required this.id,
     required this.subjectId,
@@ -18,6 +25,8 @@ class Unit {
     required this.title,
     this.xpBase = 150,
     this.wrongPenalty = 18,
+    this.quizSize,
+    this.quizIds = const [],
   });
 
   factory Unit.fromMap(Map<String, dynamic> map) => Unit(
@@ -27,6 +36,8 @@ class Unit {
     title: map['title'] as String,
     xpBase: (map['xp_base'] as int?) ?? 150,
     wrongPenalty: (map['wrong_penalty'] as int?) ?? 18,
+    quizSize: map['quiz_size'] as int?,
+    quizIds: ((map['quiz_ids'] as List?) ?? const []).cast<String>(),
   );
 
   static String toArabicNumeral(int n) {

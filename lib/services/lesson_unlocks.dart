@@ -1,5 +1,6 @@
 import '../models/lesson.dart';
 import '../models/question.dart';
+import '../models/unit.dart';
 import 'quiz_builder.dart';
 
 /// Unit-start / unlock rules shared by path, units, and detail screens.
@@ -49,13 +50,25 @@ class LessonUnlocks {
 }
 
 /// Builds a lesson quiz via the shared [QuizBuilder].
+///
+/// The lesson itself is the only source of delivery config
+/// (تمرين الدرس settings — DB columns `quiz_size` / `quiz_ids`; every
+/// lesson carries a value: existing rows were backfilled and new rows
+/// inherit the column default).
+///  1. [Lesson.quizIds] non-empty → exactly those questions, display order
+///     preserved (unknown ids dropped; a fully-stale list falls through).
+///  2. otherwise [Lesson.quizSize] → that many randomized questions
+///     (null / invalid → empty quiz — the lesson is not configured).
 List<Question> buildLessonQuiz({
   required String subjectId,
   required int lessonIndex,
+  required Lesson lesson,
   required List<Question> pool,
-  int? count,
 }) {
-  final quizCount = count ?? (subjectId == 'english' ? 10 : 3);
+  final pinned = QuizBuilder.pinned(pool, lesson.quizIds);
+  if (pinned.isNotEmpty) return pinned;
+  final quizCount = lesson.quizSize ?? 0;
+  if (quizCount < 1 || pool.isEmpty) return const [];
   return QuizBuilder.build(
     'lesson:$subjectId:$lessonIndex',
     pool,
@@ -64,11 +77,27 @@ List<Question> buildLessonQuiz({
 }
 
 /// Builds a unit quiz from the unit's questions (any lesson count).
+///
+/// The unit is the only source of delivery config (تمرين الوحدة settings —
+/// DB columns `quiz_size` / `quiz_ids`; seeded rows carry the historical
+/// value 10):
+///  1. [Unit.quizIds] non-empty → exactly those questions, display order
+///     preserved (unknown ids dropped; a fully-stale list falls through).
+///  2. otherwise [Unit.quizSize] → that many randomized questions (null /
+///     invalid → empty quiz — the Start button stays disabled).
 List<Question> buildUnitQuiz({
   required String subjectId,
   required int unitIndex,
+  required Unit unit,
   required List<Question> pool,
-  int count = 10,
 }) {
-  return QuizBuilder.build('unit:$subjectId:$unitIndex', pool, count: count);
+  final pinned = QuizBuilder.pinned(pool, unit.quizIds);
+  if (pinned.isNotEmpty) return pinned;
+  final quizCount = unit.quizSize ?? 0;
+  if (quizCount < 1 || pool.isEmpty) return const [];
+  return QuizBuilder.build(
+    'unit:$subjectId:$unitIndex',
+    pool,
+    count: quizCount,
+  );
 }

@@ -48,6 +48,29 @@ class QuizBuilder {
     return selected;
   }
 
+  /// Builds a quiz containing exactly the pool questions whose ids appear
+  /// in [ids] (the admin-pinned list), in that order. Unknown / duplicate
+  /// ids are skipped; option-order shuffling mirrors [build]. Returns an
+  /// empty list when nothing matches — callers fall back to automatic
+  /// selection.
+  static List<Question> pinned(
+    List<Question> pool,
+    List<String> ids, {
+    Random? random,
+  }) {
+    if (pool.isEmpty || ids.isEmpty) return const [];
+    final rnd = random ?? Random();
+    final byId = {for (final q in pool) q.id: q};
+    final selected = <Question>[];
+    final picked = <String>{};
+    for (final id in ids) {
+      if (!picked.add(id)) continue;
+      final q = byId[id];
+      if (q != null) selected.add(_shuffleOptions(q, rnd));
+    }
+    return selected;
+  }
+
   static Question _shuffleOptions(Question q, Random rnd) {
     if (!_shufflableTypes.contains(q.type) || q.options.length < 2) return q;
     final indices = List<int>.generate(q.options.length, (i) => i)

@@ -11,6 +11,7 @@ import '../../../utils/question_types.dart';
 import '../../../utils/routes.dart';
 import '../admin_widgets.dart';
 import 'editor_dialogs.dart';
+import 'quiz_delivery_card.dart';
 
 /// Questions inside one lesson: list, up/down reorder (admin_reorder_questions
 /// RPC), add and edit. Route: /admin/content/editor/questions
@@ -39,11 +40,23 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
   bool _busy = false;
   String? _lessonTitle;
 
+  // Quiz delivery (تمرين الدرس) editor state — hydrated in [_load].
+  String? _lessonId;
+  QuizDeliveryMode _mode = QuizDeliveryMode.fixedCount;
+  List<String> _selectedPinnedIds = const [];
+  final TextEditingController _sizeController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _admin = ContentAdminRepository(Supabase.instance.client);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _sizeController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -56,19 +69,30 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
         widget.subjectId,
         widget.lessonIndex,
       );
-      String? lessonTitle;
+      // Identity + quiz delivery settings in one row read (drafts included).
+      LessonQuizSettings? settings;
       try {
-        lessonTitle = await _admin.fetchLessonTitle(
+        settings = await _admin.fetchLessonQuizSettings(
           widget.subjectId,
           widget.lessonIndex,
         );
       } catch (_) {
-        // Cosmetic — the question list still loads if the title fails.
+        // Cosmetic — editing still works with the defaults below.
       }
       if (!mounted) return;
       setState(() {
         _questions = questions;
-        _lessonTitle = lessonTitle;
+        _lessonTitle = settings?.title;
+        _lessonId = settings?.id;
+        if (settings != null) {
+          _selectedPinnedIds = List.of(settings.quizIds);
+          // Two modes now — the count value always exists (backfilled or
+          // column default); empty text only until the row arrives.
+          _mode = settings.usesPinnedQuestions
+              ? QuizDeliveryMode.pinned
+              : QuizDeliveryMode.fixedCount;
+          _sizeController.text = settings.quizSize?.toString() ?? '';
+        }
         _loading = false;
       });
     } catch (e) {
@@ -148,6 +172,58 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
     }
   }
 
+  void _togglePinned(String id) {
+    if (_busy) return;
+    setState(() {
+      if (_selectedPinnedIds.contains(id)) {
+        _selectedPinnedIds = List.of(_selectedPinnedIds)..remove(id);
+      } else {
+        _selectedPinnedIds = List.of(_selectedPinnedIds)..add(id);
+      }
+    });
+  }
+
+  void _bumpSize(int delta) {
+    final current = int.tryParse(_sizeController.text.trim()) ?? 0;
+    final next = (current + delta).clamp(1, 200);
+    setState(() => _sizeController.text = next.toString());
+  }
+
+  /// Persists the quiz delivery config: fixed count (quiz_size) or pinned
+  /// ids (quiz_ids — overrides the count, display order preserved).
+  Future<void> _saveSettings() async {
+    final lessonId = _lessonId;
+    if (lessonId == null) {
+      editorSnack(context, errorMessage: 'الدرس غير موجود');
+      return;
+    }
+    final (:error, quizSize: newSize, quizIds: newIds) = resolveQuizDelivery(
+      mode: _mode,
+      sizeController: _sizeController,
+      selectedIds: _selectedPinnedIds,
+    );
+    if (error != null) {
+      editorSnack(context, errorMessage: error);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _admin.updateLessonQuiz(
+        lessonId: lessonId,
+        quizSize: newSize,
+        quizIds: newIds,
+      );
+      await _refreshStudentContent();
+      if (!mounted) return;
+      editorSnack(context, success: 'تم حفظ إعدادات التمرين');
+    } catch (e) {
+      if (!mounted) return;
+      editorSnack(context, error: e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading && _questions == null) {
@@ -174,28 +250,59 @@ class _ContentQuestionListScreenState extends State<ContentQuestionListScreen> {
         onRefresh: _load,
         child: questions.isEmpty
             ? ListView(
-                children: const [
-                  SizedBox(height: 120),
-                  Center(child: AdminEmptyText('لا توجد أسئلة في هذا الدرس')),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: QuizDeliveryCard(
+                      questions: questions,
+                      mode: _mode,
+                      sizeController: _sizeController,
+                      selectedIds: _selectedPinnedIds,
+                      busy: _busy,
+                      onModeChanged: (m) => setState(() => _mode = m),
+                      onTogglePinned: _togglePinned,
+                      onSizeDelta: _bumpSize,
+                      onSave: _saveSettings,
+                    ),
+                  ),
+                  const SizedBox(height: 120),
+                  const Center(
+                    child: AdminEmptyText('لا توجد أسئلة في هذا الدرس'),
+                  ),
                 ],
               )
-            : ListView.builder(
+            : ListView(
                 padding: const EdgeInsets.all(16),
-                itemCount: questions.length,
-                itemBuilder: (context, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _QuestionRow(
-                    question: questions[i],
-                    position: i + 1,
+                children: [
+                  QuizDeliveryCard(
+                    questions: questions,
+                    mode: _mode,
+                    sizeController: _sizeController,
+                    selectedIds: _selectedPinnedIds,
                     busy: _busy,
-                    canUp: i > 0 && !_busy,
-                    canDown: i < questions.length - 1 && !_busy,
-                    onUp: () => _move(i, -1),
-                    onDown: () => _move(i, 1),
-                    onEdit: () => _openEditor(question: questions[i]),
-                    onDelete: () => _delete(questions[i]),
+                    onModeChanged: (m) => setState(() => _mode = m),
+                    onTogglePinned: _togglePinned,
+                    onSizeDelta: _bumpSize,
+                    onSave: _saveSettings,
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  ...List.generate(questions.length, (i) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _QuestionRow(
+                        question: questions[i],
+                        position: i + 1,
+                        busy: _busy,
+                        canUp: i > 0 && !_busy,
+                        canDown: i < questions.length - 1 && !_busy,
+                        onUp: () => _move(i, -1),
+                        onDown: () => _move(i, 1),
+                        onEdit: () => _openEditor(question: questions[i]),
+                        onDelete: () => _delete(questions[i]),
+                      ),
+                    );
+                  }),
+                ],
               ),
       ),
     );

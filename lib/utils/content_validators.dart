@@ -47,6 +47,13 @@ String? validateWrongPenalty(int value) {
   return null;
 }
 
+/// Number of questions a lesson quiz shows (mirrors the
+/// `lessons.quiz_size` CHECK constraint: 1..200).
+String? validateQuizSize(int value) {
+  if (value < 1 || value > 200) return 'عدد الأسئلة من 1 إلى 200';
+  return null;
+}
+
 /// Optional remote image URL (uploaded images are https Supabase URLs).
 String? validateImageUrl(String? value) {
   if (value == null || value.trim().isEmpty) return null;
