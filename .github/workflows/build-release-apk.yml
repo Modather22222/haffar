@@ -2,6 +2,10 @@ name: Build Release APK
 
 on:
   workflow_dispatch:
+  # TEMP (verification of the quiz-delivery feature): fires the release build
+  # on this push; reverted in the next commit. Manual-only design preserved.
+  push:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
