@@ -13,18 +13,13 @@ class AdminRepository {
 
   AdminRepository(this._client);
 
-  /// The signed-in user's is_admin flag (own profile row, RLS-readable).
-  /// Used by SessionProvider to show/hide the dashboard button — display
-  /// only; the server re-checks on every admin call.
+  /// Whether the signed-in user is in the dedicated admins table, via the
+  /// fn_is_admin() RPC. Used by SessionProvider to show/hide the dashboard
+  /// button — display only; the server re-checks on every admin call.
   Future<bool> fetchIsAdmin() async {
-    final uid = _client.auth.currentUser?.id;
-    if (uid == null) return false;
-    final row = await _client
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', uid)
-        .maybeSingle();
-    return (row?['is_admin'] as bool?) ?? false;
+    if (_client.auth.currentUser?.id == null) return false;
+    final result = await _client.rpc('fn_is_admin');
+    return result == true;
   }
 
   Future<AdminOverview> fetchOverview() async {

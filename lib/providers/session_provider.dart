@@ -173,7 +173,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   bool remoteSyncEnabled = false;
 
-  /// Whether the signed-in user is an admin (own profiles.is_admin row).
+  /// Whether the signed-in user is an admin (admins-table membership).
   /// Display gating only — every admin RPC/function re-checks server-side.
   bool isAdmin = false;
 
@@ -232,7 +232,7 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
 
-      // Own-row is_admin read (RLS allows it). Kept out of the main try so a
+      // Admin-membership RPC (fn_is_admin()). Kept out of the main try so a
       // failure here can't fail hydration — the flag simply stays false.
       try {
         isAdmin = await AdminRepository(client).fetchIsAdmin();
