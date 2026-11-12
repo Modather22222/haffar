@@ -177,11 +177,10 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (callerErr) throw callerErr;
       const { data: admins, error: adminErr } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("is_admin", true);
+        .from("admins")
+        .select("user_id");
       if (adminErr) throw adminErr;
-      targets = (admins ?? []).map((a) => a.id as string);
+      targets = (admins ?? []).map((a) => a.user_id as string);
       if (targets.length === 0) {
         return Response.json({ sent: 0, dropped: 0, targets: 0 });
       }
@@ -190,14 +189,15 @@ Deno.serve(async (req) => {
       body = `أرسل ${name} طلب اشتراك`;
       logKind = "subscription_created";
     } else {
-      // Approval is an admin decision — re-check server-side.
+      // Approval is an admin decision — re-check the admins table
+      // server-side (replaces the dropped profiles.is_admin column).
       const { data: caller, error: callerErr } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", sub)
+        .from("admins")
+        .select("user_id")
+        .eq("user_id", sub)
         .maybeSingle();
       if (callerErr) throw callerErr;
-      if (!caller?.is_admin) {
+      if (!caller) {
         return new Response("forbidden", { status: 403 });
       }
       if (order.status !== "approved") {

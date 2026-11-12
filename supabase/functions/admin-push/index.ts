@@ -2,7 +2,9 @@
 //
 // verify_jwt is ON: the gateway validates the caller's access token before
 // this code runs, so we can trust the token payload; we still re-check
-// profiles.is_admin server-side (the in-app button flag is UX only).
+// profiles.is_admin was replaced by the dedicated admins table — we still
+// re-check admins-table membership server-side (the in-app button flag is
+// UX only).
 //
 // Body: { body: string, user_id?: string, segment?: "dormant_7d" |
 // "active_7d" } — omit user_id/segment to broadcast to every registered
@@ -152,14 +154,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Server-side admin gate — never trust the client's is_admin flag.
+    // Server-side admin gate — never trust the client's flag. Membership
+    // lives in the dedicated admins table (service-role read, RLS-free).
     const { data: caller, error: callerErr } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", sub)
+      .from("admins")
+      .select("user_id")
+      .eq("user_id", sub)
       .maybeSingle();
     if (callerErr) throw callerErr;
-    if (!caller?.is_admin) {
+    if (!caller) {
       return new Response("forbidden", { status: 403 });
     }
 
